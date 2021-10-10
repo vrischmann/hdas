@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const heap = std.heap;
 const json = std.json;
 const mem = std.mem;
@@ -9,11 +10,18 @@ const http = @import("apple_pie");
 
 const HealthData = @import("HealthData.zig");
 
-const Context = struct {
-    root_allocator: *mem.Allocator,
+pub const log_level: std.log.Level = switch (builtin.mode) {
+    .Debug => .debug,
+    .ReleaseSafe => .info,
+    .ReleaseFast => .info,
+    .ReleaseSmall => .info,
 };
 
 const logger = std.log.scoped(.main);
+
+const Context = struct {
+    root_allocator: *mem.Allocator,
+};
 
 fn handler(context: *Context, response: *http.Response, request: http.Request) !void {
     const startHandling = time.milliTimestamp();
