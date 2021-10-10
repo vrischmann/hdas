@@ -213,6 +213,23 @@ test "parse" {
 
     const health_data = try parse(allocator, test_data);
 
-    try testing.expect(health_data.data.metrics != null);
-    try testing.expectEqual(@as(usize, 0), health_data.data.metrics.?.items.len);
+    if (build_options.test_data) |_| {
+        try testing.expect(health_data.data.metrics != null);
+        try testing.expectEqual(@as(usize, 9), health_data.data.metrics.?.items.len);
+
+        const metrics = health_data.data.metrics.?.items;
+
+        try testing.expectEqualStrings("headphone_audio_exposure", metrics[0].name);
+        try testing.expectEqualStrings("heart_rate", metrics[1].name);
+        try testing.expectEqualStrings("resting_heart_rate", metrics[2].name);
+        try testing.expectEqualStrings("step_count", metrics[3].name);
+        try testing.expectEqualStrings("walking_running_distance", metrics[4].name);
+        try testing.expectEqualStrings("walking_heart_rate_average", metrics[5].name);
+        try testing.expectEqualStrings("walking_speed", metrics[6].name);
+        try testing.expectEqualStrings("walking_step_length", metrics[7].name);
+        try testing.expectEqualStrings("weight_body_mass", metrics[8].name);
+    } else {
+        try testing.expect(health_data.data.metrics != null);
+        try testing.expectEqual(@as(usize, 0), health_data.data.metrics.?.items.len);
+    }
 }
