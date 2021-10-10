@@ -25,11 +25,6 @@ const Context = struct {
     db: *sqlite.Db,
 };
 
-const insert_metric_query =
-    \\INSERT INTO metric(name, units) VALUES(?{[]const u8}, ?{[]const u8})
-    \\ON CONFLICT DO NOTHING
-;
-
 fn handler(context: *Context, response: *http.Response, request: http.Request) !void {
     const startHandling = time.milliTimestamp();
     defer {
@@ -63,7 +58,17 @@ fn handler(context: *Context, response: *http.Response, request: http.Request) !
     });
     defer insert_metric_stmt.deinit();
 
+    var insert_metric_data_point_stmt = try context.db.prepareWithDiags(insert_metric_data_point_query, .{
+        .diags = &insert_diags,
+    });
+    defer insert_metric_data_point_stmt.deinit();
+
     //
+
+    try context.db.exec("BEGIN", .{}, .{});
+    errdefer {
+        context.db.exec("ROLLBACK", .{}, .{}) catch unreachable;
+    }
 
     if (body.data.metrics) |metrics| {
         for (metrics.items) |metric| {
@@ -75,24 +80,38 @@ fn handler(context: *Context, response: *http.Response, request: http.Request) !
 
             if (metric.data) |data| {
                 logger.info("got {d} metrics for {s}, units: {s}", .{ data.items.len, metric.name, metric.units });
+
                 for (data.items) |item| {
-                    logger.info("date: {s}== got metric, min: {d}, max: {d}, avg: {d}, quantity: {d}", .{
-                        item.date,
-                        item.min,
-                        item.max,
-                        item.avg,
-                        item.quantity,
+                    insert_metric_data_point_stmt.reset();
+                    try insert_metric_data_point_stmt.exec(.{}, .{
+                        .date = item.date,
+                        .min = item.min,
+                        .max = item.max,
+                        .avg = item.avg,
+                        .quantity = item.quantity,
                     });
                 }
             }
         }
     }
 
+    try context.db.exec("COMMIT", .{}, .{});
+
     //
 
     try response.writeHeader(.accepted);
     try response.writer().writeAll("Accepted");
 }
+
+const insert_metric_query =
+    \\INSERT INTO metric(name, units) VALUES(?{[]const u8}, ?{[]const u8})
+    \\ON CONFLICT DO NOTHING
+;
+
+const insert_metric_data_point_query =
+    \\INSERT INTO metric_data_point(date, min, max, avg, quantity) VALUES(?{[]const u8}, ?, ?, ?, ?)
+    \\ON CONFLICT DO NOTHING
+;
 
 const schema: []const []const u8 = &[_][]const u8{
     \\ CREATE TABLE IF NOT EXISTS metric(
@@ -161,6 +180,8 @@ pub fn main() anyerror!void {
 
     var db = try getDb(allocator, options.options.@"database-path");
     defer db.deinit();
+
+    _ = try db.pragma(void, .{}, "foreign_keys", "1");
 
     inline for (schema) |ddl| {
         try db.exec(ddl, .{}, .{});
