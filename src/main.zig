@@ -56,12 +56,13 @@ fn handler(context: *Context, response: *http.Response, request: http.Request) !
             if (metric.data) |data| {
                 logger.info("got {d} metrics for {s}, units: {s}", .{ data.items.len, metric.name, metric.units });
                 for (data.items) |item| {
-                    switch (item) {
-                        .heart_rate => |v| {
-                            logger.info("got heart rate, min: {d}, max: {d}, avg: {d}", .{ v.min, v.max, v.avg });
-                        },
-                        else => {},
-                    }
+                    logger.info("date: {s}== got metric, min: {d}, max: {d}, avg: {d}, quantity: {d}", .{
+                        item.date,
+                        item.min,
+                        item.max,
+                        item.avg,
+                        item.quantity,
+                    });
                 }
             }
         }
@@ -73,17 +74,46 @@ fn handler(context: *Context, response: *http.Response, request: http.Request) !
     try response.writer().writeAll("Accepted");
 }
 
-fn getDb(allocator: *mem.Allocator, path: []const u8) !sqlite.Db {
-    const tmp_path = try allocator.dupeZ(u8, path);
-    defer allocator.free(tmp_path);
+const schema: []const []const u8 = &[_][]const u8{
+    \\ CREATE TABLE IF NOT EXISTS metric(
+    \\   id integer PRIMARY KEY,
+    \\   name text,
+    \\   units text,
+    \\   UNIQUE (name)
+    \\ );
+    ,
+    \\ CREATE TABLE IF NOT EXISTS metric_data_point(
+    \\   id integer PRIMARY KEY,
+    \\   metric_id integer,
+    \\   date integer,
+    \\   min real,
+    \\   max real,
+    \\   avg real,
+    \\   quantity real,
+    \\   FOREIGN KEY (metric_id) REFERENCES metric(id)
+    \\ );
+};
 
-    return try sqlite.Db.init(.{
-        .mode = if (path.len == 0) .{ .Memory = {} } else .{ .File = tmp_path },
+fn getDb(allocator: *mem.Allocator, nullable_path: ?[]const u8) !sqlite.Db {
+    var arena = heap.ArenaAllocator.init(allocator);
+
+    const db_mode = if (nullable_path) |path|
+        sqlite.Db.Mode{ .File = try arena.allocator.dupeZ(u8, path) }
+    else
+        sqlite.Db.Mode{ .Memory = {} };
+
+    var diags = sqlite.Diagnostics{};
+    return sqlite.Db.init(.{
+        .mode = db_mode,
         .open_flags = .{
             .write = true,
             .create = true,
         },
-    });
+        .diags = &diags,
+    }) catch |err| {
+        logger.err("unable to open database, err: {s}, diagnostics: {s}", .{ err, diags });
+        return err;
+    };
 }
 
 pub fn main() anyerror!void {
@@ -99,7 +129,7 @@ pub fn main() anyerror!void {
         @"listen-addr": []const u8 = "127.0.0.1",
         @"listen-port": u16 = 5804,
 
-        @"database-path": []const u8 = "",
+        @"database-path": ?[]const u8 = null,
     }, allocator, .print);
     defer options.deinit();
 
@@ -110,6 +140,10 @@ pub fn main() anyerror!void {
 
     var db = try getDb(allocator, options.options.@"database-path");
     defer db.deinit();
+
+    inline for (schema) |ddl| {
+        try db.exec(ddl, .{}, .{});
+    }
 
     //
 

@@ -9,26 +9,12 @@ const Self = @This();
 
 const logger = std.log.scoped(.health_data);
 
-const GenericDataPoint = struct {
+pub const MetricDataPoint = struct {
     date: []const u8,
-    quantity: f64,
-};
-
-pub const MetricDataPoint = union(enum) {
-    headphone_audio_exposure: GenericDataPoint,
-    heart_rate: struct {
-        date: []const u8,
-        min: f64,
-        max: f64,
-        avg: f64,
-    },
-    resting_heart_rate: GenericDataPoint,
-    step_count: GenericDataPoint,
-    walking_running_distance: GenericDataPoint,
-    walking_heart_rate_average: GenericDataPoint,
-    walking_speed: GenericDataPoint,
-    walking_step_length: GenericDataPoint,
-    weight_body_mass: GenericDataPoint,
+    min: ?f64 = null,
+    max: ?f64 = null,
+    avg: ?f64 = null,
+    quantity: ?f64 = null,
 };
 
 pub const Metric = struct {
@@ -73,14 +59,14 @@ const ParseHeadphoneAudioExposureError = error{
     InvalidMetricBody,
 } || GetAsStringError || GetAsFloatError || fmt.ParseFloatError;
 
-fn parseGenericDataPoint(comptime TagType: std.meta.FieldEnum(MetricDataPoint), allocator: *mem.Allocator, value: json.Value) ParseHeadphoneAudioExposureError!MetricDataPoint {
+fn parseGenericDataPoint(allocator: *mem.Allocator, value: json.Value) ParseHeadphoneAudioExposureError!MetricDataPoint {
     _ = allocator;
     switch (value) {
         .Object => |obj| {
-            return @unionInit(MetricDataPoint, @tagName(TagType), GenericDataPoint{
+            return MetricDataPoint{
                 .date = try getAsString(obj.get("date")),
                 .quantity = try getAsFloat(obj.get("qty")),
-            });
+            };
         },
         else => return error.InvalidMetricBody,
     }
@@ -94,12 +80,12 @@ fn parseHeartRateDataPoint(allocator: *mem.Allocator, value: json.Value) ParseHe
     _ = allocator;
     switch (value) {
         .Object => |obj| {
-            return MetricDataPoint{ .heart_rate = .{
+            return MetricDataPoint{
                 .date = try getAsString(obj.get("date")),
                 .min = try getAsFloat(obj.get("Min")),
                 .max = try getAsFloat(obj.get("Max")),
                 .avg = try getAsFloat(obj.get("Avg")),
-            } };
+            };
         },
         else => return error.InvalidMetricBody,
     }
@@ -124,24 +110,8 @@ fn parseMetric(allocator: *mem.Allocator, value: json.Value) !Metric {
 
                         const data_point = if (mem.eql(u8, metric.name, "heart_rate"))
                             try parseHeartRateDataPoint(allocator, item)
-                        else if (mem.eql(u8, metric.name, "headphone_audio_exposure"))
-                            try parseGenericDataPoint(.headphone_audio_exposure, allocator, item)
-                        else if (mem.eql(u8, metric.name, "resting_heart_rate"))
-                            try parseGenericDataPoint(.resting_heart_rate, allocator, item)
-                        else if (mem.eql(u8, metric.name, "step_count"))
-                            try parseGenericDataPoint(.step_count, allocator, item)
-                        else if (mem.eql(u8, metric.name, "walking_running_distance"))
-                            try parseGenericDataPoint(.walking_running_distance, allocator, item)
-                        else if (mem.eql(u8, metric.name, "walking_heart_rate_average"))
-                            try parseGenericDataPoint(.walking_heart_rate_average, allocator, item)
-                        else if (mem.eql(u8, metric.name, "walking_speed"))
-                            try parseGenericDataPoint(.walking_speed, allocator, item)
-                        else if (mem.eql(u8, metric.name, "walking_step_length"))
-                            try parseGenericDataPoint(.walking_step_length, allocator, item)
-                        else if (mem.eql(u8, metric.name, "weight_body_mass"))
-                            try parseGenericDataPoint(.weight_body_mass, allocator, item)
                         else
-                            return error.InvalidMetricBody;
+                            try parseGenericDataPoint(allocator, item);
 
                         try metric_data.append(data_point);
                     }
