@@ -2,13 +2,12 @@ const std = @import("std");
 const heap = std.heap;
 const json = std.json;
 const mem = std.mem;
+const time = std.time;
 
 const argsParser = @import("args");
 const http = @import("apple_pie");
 
 const HealthData = @import("HealthData.zig");
-
-pub const io_mode = .evented;
 
 const Context = struct {
     root_allocator: *mem.Allocator,
@@ -17,9 +16,17 @@ const Context = struct {
 const logger = std.log.scoped(.main);
 
 fn handler(context: *Context, response: *http.Response, request: http.Request) !void {
+    const startHandling = time.milliTimestamp();
+    defer {
+        logger.info("handled request in {d}ms", .{time.milliTimestamp() - startHandling});
+    }
+
     var arena = heap.ArenaAllocator.init(context.root_allocator);
     defer arena.deinit();
     const allocator = &arena.allocator;
+
+    // Always close the connection
+    response.close = true;
 
     // Validate
 
