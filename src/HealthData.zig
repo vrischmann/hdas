@@ -8,51 +8,32 @@ const Self = @This();
 
 const logger = std.log.scoped(.health_data);
 
-pub const MetricData = union(enum) {
-    headphone_audio_exposure: struct {
-        date: []const u8,
-        quantity: f64,
-    },
+const GenericDataPoint = struct {
+    date: []const u8,
+    quantity: f64,
+};
+
+pub const MetricDataPoint = union(enum) {
+    headphone_audio_exposure: GenericDataPoint,
     heart_rate: struct {
         date: []const u8,
         min: f64,
         max: f64,
         avg: f64,
     },
-    resting_heart_rate: struct {
-        date: []const u8,
-        quantity: f64,
-    },
-    step_count: struct {
-        date: []const u8,
-        quantity: f64,
-    },
-    walking_running_distance: struct {
-        date: []const u8,
-        quantity: f64,
-    },
-    walking_heart_rate_average: struct {
-        date: []const u8,
-        quantity: f64,
-    },
-    walking_speed: struct {
-        date: []const u8,
-        quantity: f64,
-    },
-    walking_step_length: struct {
-        date: []const u8,
-        quantity: f64,
-    },
-    weight_body_mass: struct {
-        date: []const u8,
-        quantity: f64,
-    },
+    resting_heart_rate: GenericDataPoint,
+    step_count: GenericDataPoint,
+    walking_running_distance: GenericDataPoint,
+    walking_heart_rate_average: GenericDataPoint,
+    walking_speed: GenericDataPoint,
+    walking_step_length: GenericDataPoint,
+    weight_body_mass: GenericDataPoint,
 };
 
 pub const Metric = struct {
     name: []const u8 = "",
     units: []const u8 = "",
-    data: ?std.ArrayList(MetricData) = null,
+    data: ?std.ArrayList(MetricDataPoint) = null,
 };
 
 const NullValueError = error{
@@ -91,14 +72,14 @@ const ParseHeadphoneAudioExposureError = error{
     InvalidMetricBody,
 } || GetAsStringError || GetAsFloatError || fmt.ParseFloatError;
 
-fn parseHeadphoneAudioExposureDataPoint(allocator: *mem.Allocator, value: json.Value) ParseHeadphoneAudioExposureError!MetricData {
+fn parseGenericDataPoint(comptime TagType: std.meta.FieldEnum(MetricDataPoint), allocator: *mem.Allocator, value: json.Value) ParseHeadphoneAudioExposureError!MetricDataPoint {
     _ = allocator;
     switch (value) {
         .Object => |obj| {
-            return MetricData{ .headphone_audio_exposure = .{
+            return @unionInit(MetricDataPoint, @tagName(TagType), GenericDataPoint{
                 .date = try getAsString(obj.get("date")),
                 .quantity = try getAsFloat(obj.get("qty")),
-            } };
+            });
         },
         else => return error.InvalidMetricBody,
     }
@@ -108,11 +89,11 @@ const ParseHeartRateError = error{
     InvalidMetricBody,
 } || GetAsStringError || GetAsFloatError || fmt.ParseFloatError;
 
-fn parseHeartRateDataPoint(allocator: *mem.Allocator, value: json.Value) ParseHeartRateError!MetricData {
+fn parseHeartRateDataPoint(allocator: *mem.Allocator, value: json.Value) ParseHeartRateError!MetricDataPoint {
     _ = allocator;
     switch (value) {
         .Object => |obj| {
-            return MetricData{ .heart_rate = .{
+            return MetricDataPoint{ .heart_rate = .{
                 .date = try getAsString(obj.get("date")),
                 .min = try getAsFloat(obj.get("Min")),
                 .max = try getAsFloat(obj.get("Max")),
@@ -135,13 +116,13 @@ fn parseMetric(allocator: *mem.Allocator, value: json.Value) !Metric {
 
             switch (data) {
                 .Array => |array| {
-                    var metric_data = try std.ArrayList(MetricData).initCapacity(allocator, array.items.len);
+                    var metric_data = try std.ArrayList(MetricDataPoint).initCapacity(allocator, array.items.len);
 
                     for (array.items) |item| {
-                        const data_point: MetricData = if (mem.eql(u8, metric.name, "headphone_audio_exposure"))
-                            try parseHeadphoneAudioExposureDataPoint(allocator, item)
-                        else if (mem.eql(u8, metric.name, "heart_rate"))
+                        const data_point = if (mem.eql(u8, metric.name, "heart_rate"))
                             try parseHeartRateDataPoint(allocator, item)
+                        else if (mem.eql(u8, metric.name, "headphone_audio_exposure"))
+                            try parseGenericDataPoint(.headphone_audio_exposure, allocator, item)
                         else
                             return error.InvalidMetricBody;
 
