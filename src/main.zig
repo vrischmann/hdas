@@ -56,12 +56,13 @@ fn handler(context: *Context, response: *http.Response, request: http.Request) !
             if (metric.data) |data| {
                 logger.info("got {d} metrics for {s}, units: {s}", .{ data.items.len, metric.name, metric.units });
                 for (data.items) |item| {
-                    switch (item) {
-                        .heart_rate => |v| {
-                            logger.info("got heart rate, min: {d}, max: {d}, avg: {d}", .{ v.min, v.max, v.avg });
-                        },
-                        else => {},
-                    }
+                    logger.info("date: {s}== got metric, min: {d}, max: {d}, avg: {d}, quantity: {d}", .{
+                        item.date,
+                        item.min,
+                        item.max,
+                        item.avg,
+                        item.quantity,
+                    });
                 }
             }
         }
