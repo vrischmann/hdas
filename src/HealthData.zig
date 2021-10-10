@@ -119,10 +119,26 @@ fn parseMetric(allocator: *mem.Allocator, value: json.Value) !Metric {
                     var metric_data = try std.ArrayList(MetricDataPoint).initCapacity(allocator, array.items.len);
 
                     for (array.items) |item| {
+                        // TODO(vincent): can this be made better ?
+
                         const data_point = if (mem.eql(u8, metric.name, "heart_rate"))
                             try parseHeartRateDataPoint(allocator, item)
                         else if (mem.eql(u8, metric.name, "headphone_audio_exposure"))
                             try parseGenericDataPoint(.headphone_audio_exposure, allocator, item)
+                        else if (mem.eql(u8, metric.name, "resting_heart_rate"))
+                            try parseGenericDataPoint(.resting_heart_rate, allocator, item)
+                        else if (mem.eql(u8, metric.name, "step_count"))
+                            try parseGenericDataPoint(.step_count, allocator, item)
+                        else if (mem.eql(u8, metric.name, "walking_running_distance"))
+                            try parseGenericDataPoint(.walking_running_distance, allocator, item)
+                        else if (mem.eql(u8, metric.name, "walking_heart_rate_average"))
+                            try parseGenericDataPoint(.walking_heart_rate_average, allocator, item)
+                        else if (mem.eql(u8, metric.name, "walking_speed"))
+                            try parseGenericDataPoint(.walking_speed, allocator, item)
+                        else if (mem.eql(u8, metric.name, "walking_step_length"))
+                            try parseGenericDataPoint(.walking_step_length, allocator, item)
+                        else if (mem.eql(u8, metric.name, "weight_body_mass"))
+                            try parseGenericDataPoint(.weight_body_mass, allocator, item)
                         else
                             return error.InvalidMetricBody;
 
