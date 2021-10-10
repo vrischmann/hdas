@@ -201,9 +201,14 @@ pub fn parse(allocator: *mem.Allocator, body: []const u8) !Self {
     return res;
 }
 
-const test_data = @embedFile("../testdata/test_data.json");
-
 test "parse" {
+    const build_options = @import("build_options");
+    const test_data = if (build_options.test_data) |data|
+        @embedFile(data)
+    else
+        \\{"data":{"workouts":[],"metrics":[]}}
+        ;
+
     var arena = heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
     const allocator = &arena.allocator;
