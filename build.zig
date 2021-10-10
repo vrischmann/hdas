@@ -4,7 +4,8 @@ const deps = @import("deps.zig");
 pub fn build(b: *std.build.Builder) void {
     const test_data = b.option([]const u8, "test_data", "Test with this data file");
 
-    const target = b.standardTargetOptions(.{});
+    var target = b.standardTargetOptions(.{});
+    target.setGnuLibCVersion(2, 28, 0);
     const mode = b.standardReleaseOptions();
 
     const exe = b.addExecutable("health-data-api", "src/main.zig");
