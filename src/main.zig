@@ -25,6 +25,11 @@ const Context = struct {
     db: *sqlite.Db,
 };
 
+const insert_metric_query =
+    \\INSERT INTO metric(name, units) VALUES(?{[]const u8}, ?{[]const u8})
+    \\ON CONFLICT DO NOTHING
+;
+
 fn handler(context: *Context, response: *http.Response, request: http.Request) !void {
     const startHandling = time.milliTimestamp();
     defer {
@@ -49,10 +54,25 @@ fn handler(context: *Context, response: *http.Response, request: http.Request) !
     // Parse the body
 
     const body = try HealthData.parse(allocator, request.body());
-    _ = body;
+
+    // Prepare the statements
+
+    var insert_diags = sqlite.Diagnostics{};
+    var insert_metric_stmt = try context.db.prepareWithDiags(insert_metric_query, .{
+        .diags = &insert_diags,
+    });
+    defer insert_metric_stmt.deinit();
+
+    //
 
     if (body.data.metrics) |metrics| {
         for (metrics.items) |metric| {
+            insert_metric_stmt.reset();
+            try insert_metric_stmt.exec(.{}, .{
+                .name = metric.name,
+                .units = metric.units,
+            });
+
             if (metric.data) |data| {
                 logger.info("got {d} metrics for {s}, units: {s}", .{ data.items.len, metric.name, metric.units });
                 for (data.items) |item| {
@@ -90,6 +110,7 @@ const schema: []const []const u8 = &[_][]const u8{
     \\   max real,
     \\   avg real,
     \\   quantity real,
+    \\   UNIQUE (id, metric_id, date),
     \\   FOREIGN KEY (metric_id) REFERENCES metric(id)
     \\ );
 };
