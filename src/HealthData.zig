@@ -3,6 +3,7 @@ const fmt = std.fmt;
 const heap = std.heap;
 const json = std.json;
 const mem = std.mem;
+const testing = std.testing;
 
 const Self = @This();
 
@@ -212,5 +213,6 @@ test "parse" {
 
     const health_data = try parse(allocator, test_data);
 
-    std.debug.print("health data: {s}\n", .{health_data});
+    try testing.expect(health_data.data.metrics != null);
+    try testing.expectEqual(@as(usize, 0), health_data.data.metrics.?.items.len);
 }
