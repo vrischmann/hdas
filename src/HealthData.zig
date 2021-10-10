@@ -228,6 +228,11 @@ test "parse" {
         try testing.expectEqualStrings("walking_speed", metrics[6].name);
         try testing.expectEqualStrings("walking_step_length", metrics[7].name);
         try testing.expectEqualStrings("weight_body_mass", metrics[8].name);
+
+        for (metrics) |metric| {
+            try testing.expect(metric.data != null);
+            try testing.expect(metric.data.?.items.len > 0);
+        }
     } else {
         try testing.expect(health_data.data.metrics != null);
         try testing.expectEqual(@as(usize, 0), health_data.data.metrics.?.items.len);
