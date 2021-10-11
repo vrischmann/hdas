@@ -49,4 +49,4 @@ jobs:
         run: zigmod fetch
 
       - name: Build
-        run: zig build
+        run: zig build --verbose-cc --verbose --verbose-link
