@@ -29,6 +29,20 @@ jobs:
           version: master
       - uses: nektro/actions-setup-zigmod@v1
 
+      - name: Cache zig-cache
+        uses: actions/cache@v2
+        with:
+          path: zig-cache
+          key: ${{ runner.os }}-build-zig
+
+      - name: Cache zigmod deps
+        uses: actions/cache@v2
+        with:
+          path: .zigmod
+          key: ${{ runner.os }}-build-zigmod-${{ hashFiles('zigmod.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-build-zigmod-
+
       - name: Fetch dependencies
         run: zigmod fetch
 
