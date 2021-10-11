@@ -32,7 +32,9 @@ jobs:
       - name: Cache zig-cache
         uses: actions/cache@v2
         with:
-          path: zig-cache
+          path: |
+            zig-cache
+            ~/.cache/zig
           key: ${{ runner.os }}-build-zig
 
       - name: Cache zigmod deps
@@ -47,4 +49,4 @@ jobs:
         run: zigmod fetch
 
       - name: Build
-        run: zig build
+        run: zig build --verbose-cc --verbose --verbose-link
