@@ -134,11 +134,11 @@ const schema: []const []const u8 = &[_][]const u8{
     \\ );
 };
 
-fn getDb(allocator: *mem.Allocator, nullable_path: ?[]const u8) !sqlite.Db {
-    var arena = heap.ArenaAllocator.init(allocator);
+fn getDb(allocator: *mem.Allocator, nullable_path: ?[:0]const u8) !sqlite.Db {
+    _ = allocator;
 
     const db_mode = if (nullable_path) |path|
-        sqlite.Db.Mode{ .File = try arena.allocator.dupeZ(u8, path) }
+        sqlite.Db.Mode{ .File = path }
     else
         sqlite.Db.Mode{ .Memory = {} };
 
@@ -169,7 +169,7 @@ pub fn main() anyerror!void {
         @"listen-addr": []const u8 = "127.0.0.1",
         @"listen-port": u16 = 5804,
 
-        @"database-path": ?[]const u8 = null,
+        @"database-path": ?[:0]const u8 = null,
     }, allocator, .print);
     defer options.deinit();
 
