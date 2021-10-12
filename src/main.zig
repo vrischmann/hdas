@@ -25,6 +25,39 @@ const Context = struct {
     db: *sqlite.Db,
 };
 
+const Statements = struct {
+    const insert_metric_query =
+        \\INSERT INTO metric(name, units) VALUES(?{[]const u8}, ?{[]const u8})
+        \\ON CONFLICT DO NOTHING
+    ;
+
+    const insert_generic_data_point_query =
+        \\INSERT INTO metric_data_point(metric_id, type, date, quantity) VALUES(?{i64}, ?{usize}, ?{[]const u8}, ?{f64})
+        \\ON CONFLICT DO NOTHING
+    ;
+
+    insert_metric: sqlite.StatementType(.{}, insert_metric_query),
+    insert_generic_data_point: sqlite.StatementType(.{}, insert_generic_data_point_query),
+
+    fn prepare(db: *sqlite.Db, diags: *sqlite.Diagnostics) !Statements {
+        var res: Statements = undefined;
+
+        res.insert_metric = try db.prepareWithDiags(insert_metric_query, .{
+            .diags = diags,
+        });
+        res.insert_generic_data_point = try db.prepareWithDiags(insert_generic_data_point_query, .{
+            .diags = diags,
+        });
+
+        return res;
+    }
+
+    pub fn deinit(self: *Statements) void {
+        self.insert_metric.deinit();
+        self.insert_generic_data_point.deinit();
+    }
+};
+
 fn handler(context: *Context, response: *http.Response, request: http.Request) !void {
     const startHandling = time.milliTimestamp();
     defer {
@@ -52,16 +85,12 @@ fn handler(context: *Context, response: *http.Response, request: http.Request) !
 
     // Prepare the statements
 
-    var insert_diags = sqlite.Diagnostics{};
-    var insert_metric_stmt = try context.db.prepareWithDiags(insert_metric_query, .{
-        .diags = &insert_diags,
-    });
-    defer insert_metric_stmt.deinit();
-
-    var insert_metric_data_point_stmt = try context.db.prepareWithDiags(insert_metric_data_point_query, .{
-        .diags = &insert_diags,
-    });
-    defer insert_metric_data_point_stmt.deinit();
+    var diags = sqlite.Diagnostics{};
+    var stmts = Statements.prepare(context.db, &diags) catch |err| {
+        logger.err("unable to prepare statements, err: {s}, diagnostics: {s}", .{ err, diags });
+        return err;
+    };
+    defer stmts.deinit();
 
     //
 
@@ -72,24 +101,35 @@ fn handler(context: *Context, response: *http.Response, request: http.Request) !
 
     if (body.data.metrics) |metrics| {
         for (metrics.items) |metric| {
-            insert_metric_stmt.reset();
-            try insert_metric_stmt.exec(.{}, .{
+            stmts.insert_metric.reset();
+            try stmts.insert_metric.exec(.{}, .{
                 .name = metric.name,
                 .units = metric.units,
             });
+            const metric_id = context.db.getLastInsertRowID();
 
             if (metric.data) |data| {
                 logger.info("got {d} metrics for {s}, units: {s}", .{ data.items.len, metric.name, metric.units });
 
                 for (data.items) |item| {
-                    insert_metric_data_point_stmt.reset();
-                    try insert_metric_data_point_stmt.exec(.{}, .{
-                        .date = item.date,
-                        .min = item.min,
-                        .max = item.max,
-                        .avg = item.avg,
-                        .quantity = item.quantity,
-                    });
+                    stmts.insert_generic_data_point.reset();
+
+                    switch (item) {
+                        .generic => |dp| {
+                            try stmts.insert_generic_data_point.exec(.{}, .{
+                                .metric_id = metric_id,
+                                .@"type" = @intCast(usize, @enumToInt(HealthData.MetricDataPoint.generic)),
+                                .date = dp.date,
+                                .quantity = dp.quantity,
+                            });
+                        },
+                        .heart_rate => |dp| {
+                            _ = dp;
+                        },
+                        .sleep_analysis => |dp| {
+                            _ = dp;
+                        },
+                    }
                 }
             }
         }
@@ -103,16 +143,6 @@ fn handler(context: *Context, response: *http.Response, request: http.Request) !
     try response.writer().writeAll("Accepted");
 }
 
-const insert_metric_query =
-    \\INSERT INTO metric(name, units) VALUES(?{[]const u8}, ?{[]const u8})
-    \\ON CONFLICT DO NOTHING
-;
-
-const insert_metric_data_point_query =
-    \\INSERT INTO metric_data_point(date, min, max, avg, quantity) VALUES(?{[]const u8}, ?, ?, ?, ?)
-    \\ON CONFLICT DO NOTHING
-;
-
 const schema: []const []const u8 = &[_][]const u8{
     \\ CREATE TABLE IF NOT EXISTS metric(
     \\   id integer PRIMARY KEY,
@@ -124,12 +154,13 @@ const schema: []const []const u8 = &[_][]const u8{
     \\ CREATE TABLE IF NOT EXISTS metric_data_point(
     \\   id integer PRIMARY KEY,
     \\   metric_id integer NOT NULL,
+    \\   type integer NOT NULL,
     \\   date integer NOT NULL,
     \\   min real,
     \\   max real,
     \\   avg real,
     \\   quantity real,
-    \\   UNIQUE (id, metric_id, date),
+    \\   UNIQUE (id, metric_id, type, date),
     \\   FOREIGN KEY (metric_id) REFERENCES metric(id)
     \\ );
 };

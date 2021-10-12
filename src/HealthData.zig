@@ -72,7 +72,7 @@ fn getAsFloat(nullable_value: ?json.Value) GetAsFloatError!f64 {
 }
 
 const ParseHeartRateError = error{
-    InvalidMetricBody,
+    InvalidMetricDataPointBody,
 } || GetAsStringError || GetAsFloatError || fmt.ParseFloatError;
 
 fn parseHeartRateDataPoint(allocator: *mem.Allocator, value: json.Value) ParseHeartRateError!MetricDataPoint {
@@ -87,18 +87,33 @@ fn parseHeartRateDataPoint(allocator: *mem.Allocator, value: json.Value) ParseHe
             };
             return MetricDataPoint{ .heart_rate = data_point };
         },
-        else => return error.InvalidMetricBody,
+        else => return error.InvalidMetricDataPointBody,
     }
 }
 
 const ParseSleepAnalysisError = error{
-    NotImplemented,
+    InvalidMetricDataPointBody,
 } || GetAsStringError || GetAsFloatError;
 
 fn parseSleepAnalysisDataPoint(allocator: *mem.Allocator, value: json.Value) ParseSleepAnalysisError!MetricDataPoint {
     _ = allocator;
-    _ = value;
-    return error.NotImplemented;
+    switch (value) {
+        .Object => |obj| {
+            const data_point = .{
+                .date = try getAsString(obj.get("date")),
+                .sleep_start = try getAsString(obj.get("sleepStart")),
+                .sleep_end = try getAsString(obj.get("sleepEnd")),
+                .sleep_source = try getAsString(obj.get("sleepSource")),
+                .in_bed_start = try getAsString(obj.get("inBedStart")),
+                .in_bed_end = try getAsString(obj.get("inBedEnd")),
+                .in_bed_source = try getAsString(obj.get("inBedSource")),
+                .in_bed = try getAsFloat(obj.get("inBed")),
+                .asleep = try getAsFloat(obj.get("asleep")),
+            };
+            return MetricDataPoint{ .sleep_analysis = data_point };
+        },
+        else => return error.InvalidMetricDataPointBody,
+    }
 }
 
 const ParseHeadphoneAudioExposureError = error{
