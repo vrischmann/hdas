@@ -30,14 +30,18 @@ const Statements = struct {
         \\INSERT INTO metric(name, units) VALUES(?{[]const u8}, ?{[]const u8})
         \\ON CONFLICT DO NOTHING
     ;
-
     const insert_generic_data_point_query =
         \\INSERT INTO metric_data_point(metric_id, type, date, quantity) VALUES(?{i64}, ?{usize}, ?{[]const u8}, ?{f64})
+        \\ON CONFLICT DO NOTHING
+    ;
+    const insert_heart_rate_data_point_query =
+        \\INSERT INTO metric_data_point(metric_id, type, date, min, max, avg) VALUES(?{i64}, ?{usize}, ?{[]const u8}, ?{f64}, ?{f64}, ?{f64})
         \\ON CONFLICT DO NOTHING
     ;
 
     insert_metric: sqlite.StatementType(.{}, insert_metric_query),
     insert_generic_data_point: sqlite.StatementType(.{}, insert_generic_data_point_query),
+    insert_heart_rate_data_point: sqlite.StatementType(.{}, insert_heart_rate_data_point_query),
 
     fn prepare(db: *sqlite.Db, diags: *sqlite.Diagnostics) !Statements {
         var res: Statements = undefined;
@@ -46,6 +50,9 @@ const Statements = struct {
             .diags = diags,
         });
         res.insert_generic_data_point = try db.prepareWithDiags(insert_generic_data_point_query, .{
+            .diags = diags,
+        });
+        res.insert_heart_rate_data_point = try db.prepareWithDiags(insert_heart_rate_data_point_query, .{
             .diags = diags,
         });
 
@@ -124,7 +131,14 @@ fn handler(context: *Context, response: *http.Response, request: http.Request) !
                             });
                         },
                         .heart_rate => |dp| {
-                            _ = dp;
+                            try stmts.insert_heart_rate_data_point.exec(.{}, .{
+                                .metric_id = metric_id,
+                                .@"type" = @intCast(usize, @enumToInt(HealthData.MetricDataPoint.heart_rate)),
+                                .date = dp.date,
+                                .min = dp.min,
+                                .max = dp.max,
+                                .avg = dp.avg,
+                            });
                         },
                         .sleep_analysis => |dp| {
                             _ = dp;
