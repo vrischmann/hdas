@@ -116,15 +116,15 @@ const insert_metric_data_point_query =
 const schema: []const []const u8 = &[_][]const u8{
     \\ CREATE TABLE IF NOT EXISTS metric(
     \\   id integer PRIMARY KEY,
-    \\   name text,
-    \\   units text,
+    \\   name text NOT NULL,
+    \\   units text NOT NULL,
     \\   UNIQUE (name)
     \\ );
     ,
     \\ CREATE TABLE IF NOT EXISTS metric_data_point(
     \\   id integer PRIMARY KEY,
-    \\   metric_id integer,
-    \\   date integer,
+    \\   metric_id integer NOT NULL,
+    \\   date integer NOT NULL,
     \\   min real,
     \\   max real,
     \\   avg real,
@@ -184,7 +184,11 @@ pub fn main() anyerror!void {
     _ = try db.pragma(void, .{}, "foreign_keys", "1");
 
     inline for (schema) |ddl| {
-        try db.exec(ddl, .{}, .{});
+        var diags = sqlite.Diagnostics{};
+        db.exec(ddl, .{ .diags = &diags }, .{}) catch |err| {
+            logger.err("unable to executing statement, err: {s}, message: {s}", .{ err, diags });
+            return err;
+        };
     }
 
     //
