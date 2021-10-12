@@ -31,11 +31,11 @@ const Statements = struct {
         \\ON CONFLICT DO NOTHING
     ;
     const insert_data_point_generic_query =
-        \\INSERT INTO data_point_generic(metric_id, type, date, quantity) VALUES(?{i64}, ?{usize}, ?{[]const u8}, ?{f64})
+        \\INSERT INTO data_point_generic(metric_id, date, quantity) VALUES(?{i64}, ?{[]const u8}, ?{f64})
         \\ON CONFLICT DO NOTHING
     ;
     const insert_data_point_heart_rate_query =
-        \\INSERT INTO data_point_heart_rate(metric_id, type, date, min, max, avg) VALUES(?{i64}, ?{usize}, ?{[]const u8}, ?{f64}, ?{f64}, ?{f64})
+        \\INSERT INTO data_point_heart_rate(metric_id, date, min, max, avg) VALUES(?{i64}, ?{[]const u8}, ?{f64}, ?{f64}, ?{f64})
         \\ON CONFLICT DO NOTHING
     ;
 
@@ -125,7 +125,6 @@ fn handler(context: *Context, response: *http.Response, request: http.Request) !
                         .generic => |dp| {
                             try stmts.insert_data_point_generic.exec(.{}, .{
                                 .metric_id = metric_id,
-                                .@"type" = @intCast(usize, @enumToInt(HealthData.MetricDataPoint.generic)),
                                 .date = dp.date,
                                 .quantity = dp.quantity,
                             });
@@ -133,7 +132,6 @@ fn handler(context: *Context, response: *http.Response, request: http.Request) !
                         .heart_rate => |dp| {
                             try stmts.insert_data_point_heart_rate.exec(.{}, .{
                                 .metric_id = metric_id,
-                                .@"type" = @intCast(usize, @enumToInt(HealthData.MetricDataPoint.heart_rate)),
                                 .date = dp.date,
                                 .min = dp.min,
                                 .max = dp.max,
