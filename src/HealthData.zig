@@ -55,23 +55,6 @@ fn getAsFloat(nullable_value: ?json.Value) GetAsFloatError!f64 {
     }
 }
 
-const ParseHeadphoneAudioExposureError = error{
-    InvalidMetricBody,
-} || GetAsStringError || GetAsFloatError || fmt.ParseFloatError;
-
-fn parseGenericDataPoint(allocator: *mem.Allocator, value: json.Value) ParseHeadphoneAudioExposureError!MetricDataPoint {
-    _ = allocator;
-    switch (value) {
-        .Object => |obj| {
-            return MetricDataPoint{
-                .date = try getAsString(obj.get("date")),
-                .quantity = try getAsFloat(obj.get("qty")),
-            };
-        },
-        else => return error.InvalidMetricBody,
-    }
-}
-
 const ParseHeartRateError = error{
     InvalidMetricBody,
 } || GetAsStringError || GetAsFloatError || fmt.ParseFloatError;
@@ -85,6 +68,33 @@ fn parseHeartRateDataPoint(allocator: *mem.Allocator, value: json.Value) ParseHe
                 .min = try getAsFloat(obj.get("Min")),
                 .max = try getAsFloat(obj.get("Max")),
                 .avg = try getAsFloat(obj.get("Avg")),
+            };
+        },
+        else => return error.InvalidMetricBody,
+    }
+}
+
+const ParseSleepAnalysisError = error{
+    NotImplemented,
+} || GetAsStringError || GetAsFloatError;
+
+fn parseSleepAnalysisDataPoint(allocator: *mem.Allocator, value: json.Value) ParseSleepAnalysisError!MetricDataPoint {
+    _ = allocator;
+    _ = value;
+    return error.NotImplemented;
+}
+
+const ParseHeadphoneAudioExposureError = error{
+    InvalidMetricBody,
+} || GetAsStringError || GetAsFloatError || fmt.ParseFloatError;
+
+fn parseGenericDataPoint(allocator: *mem.Allocator, value: json.Value) ParseHeadphoneAudioExposureError!MetricDataPoint {
+    _ = allocator;
+    switch (value) {
+        .Object => |obj| {
+            return MetricDataPoint{
+                .date = try getAsString(obj.get("date")),
+                .quantity = try getAsFloat(obj.get("qty")),
             };
         },
         else => return error.InvalidMetricBody,
@@ -110,6 +120,8 @@ fn parseMetric(allocator: *mem.Allocator, value: json.Value) !Metric {
 
                         const data_point = if (mem.eql(u8, metric.name, "heart_rate"))
                             try parseHeartRateDataPoint(allocator, item)
+                        else if (mem.eql(u8, metric.name, "sleep_analysis"))
+                            try parseSleepAnalysisDataPoint(allocator, item)
                         else
                             try parseGenericDataPoint(allocator, item);
 
