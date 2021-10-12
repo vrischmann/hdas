@@ -31,11 +31,21 @@ const Statements = struct {
         \\ON CONFLICT DO NOTHING
     ;
     const insert_data_point_generic_query =
-        \\INSERT INTO data_point_generic(metric_id, date, quantity) VALUES(?{i64}, ?{[]const u8}, ?{f64})
+        \\INSERT INTO data_point_generic(
+        \\  metric_id, date, quantity
+        \\)
+        \\VALUES(
+        \\  ?{i64}, strftime('%s', ?{[]const u8}), ?{f64}
+        \\)
         \\ON CONFLICT DO NOTHING
     ;
     const insert_data_point_heart_rate_query =
-        \\INSERT INTO data_point_heart_rate(metric_id, date, min, max, avg) VALUES(?{i64}, ?{[]const u8}, ?{f64}, ?{f64}, ?{f64})
+        \\INSERT INTO data_point_heart_rate(
+        \\  metric_id, date, min, max, avg
+        \\)
+        \\VALUES(
+        \\  ?{i64}, strftime('%s', ?{[]const u8}), ?{f64}, ?{f64}, ?{f64}
+        \\)
         \\ON CONFLICT DO NOTHING
     ;
     const insert_data_point_sleep_analysis_query =
@@ -46,9 +56,9 @@ const Statements = struct {
         \\  in_bed, asleep
         \\)
         \\VALUES(
-        \\  ?{i64}, ?{[]const u8},
-        \\  ?{[]const u8}, ?{[]const u8}, ?{[]const u8},
-        \\  ?{[]const u8}, ?{[]const u8}, ?{[]const u8},
+        \\  ?{i64}, strftime('%s', ?{[]const u8}),
+        \\  strftime('%s', ?{[]const u8}), strftime('%s', ?{[]const u8}), strftime('%s', ?{[]const u8}),
+        \\  strftime('%s', ?{[]const u8}), strftime('%s', ?{[]const u8}), strftime('%s', ?{[]const u8}),
         \\  ?{f64}, ?{f64}
         \\)
         \\ON CONFLICT DO NOTHING
@@ -219,11 +229,11 @@ const schema: []const []const u8 = &[_][]const u8{
     \\   id integer PRIMARY KEY,
     \\   metric_id integer NOT NULL,
     \\   date integer NOT NULL,
-    \\   sleep_start text NOT NULL,
-    \\   sleep_end text NOT NULL,
+    \\   sleep_start integer NOT NULL,
+    \\   sleep_end integer NOT NULL,
     \\   sleep_source text NOT NULL,
-    \\   in_bed_start text NOT NULL,
-    \\   in_bed_end text NOT NULL,
+    \\   in_bed_start integer NOT NULL,
+    \\   in_bed_end integer NOT NULL,
     \\   in_bed_source text NOT NULL,
     \\   in_bed real NOT NULL,
     \\   asleep real NOT NULL,
