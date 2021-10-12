@@ -30,18 +30,18 @@ const Statements = struct {
         \\INSERT INTO metric(name, units) VALUES(?{[]const u8}, ?{[]const u8})
         \\ON CONFLICT DO NOTHING
     ;
-    const insert_generic_data_point_query =
-        \\INSERT INTO metric_data_point(metric_id, type, date, quantity) VALUES(?{i64}, ?{usize}, ?{[]const u8}, ?{f64})
+    const insert_data_point_generic_query =
+        \\INSERT INTO data_point_generic(metric_id, type, date, quantity) VALUES(?{i64}, ?{usize}, ?{[]const u8}, ?{f64})
         \\ON CONFLICT DO NOTHING
     ;
-    const insert_heart_rate_data_point_query =
-        \\INSERT INTO metric_data_point(metric_id, type, date, min, max, avg) VALUES(?{i64}, ?{usize}, ?{[]const u8}, ?{f64}, ?{f64}, ?{f64})
+    const insert_data_point_heart_rate_query =
+        \\INSERT INTO data_point_heart_rate(metric_id, type, date, min, max, avg) VALUES(?{i64}, ?{usize}, ?{[]const u8}, ?{f64}, ?{f64}, ?{f64})
         \\ON CONFLICT DO NOTHING
     ;
 
     insert_metric: sqlite.StatementType(.{}, insert_metric_query),
-    insert_generic_data_point: sqlite.StatementType(.{}, insert_generic_data_point_query),
-    insert_heart_rate_data_point: sqlite.StatementType(.{}, insert_heart_rate_data_point_query),
+    insert_data_point_generic: sqlite.StatementType(.{}, insert_data_point_generic_query),
+    insert_data_point_heart_rate: sqlite.StatementType(.{}, insert_data_point_heart_rate_query),
 
     fn prepare(db: *sqlite.Db, diags: *sqlite.Diagnostics) !Statements {
         var res: Statements = undefined;
@@ -49,10 +49,10 @@ const Statements = struct {
         res.insert_metric = try db.prepareWithDiags(insert_metric_query, .{
             .diags = diags,
         });
-        res.insert_generic_data_point = try db.prepareWithDiags(insert_generic_data_point_query, .{
+        res.insert_data_point_generic = try db.prepareWithDiags(insert_data_point_generic_query, .{
             .diags = diags,
         });
-        res.insert_heart_rate_data_point = try db.prepareWithDiags(insert_heart_rate_data_point_query, .{
+        res.insert_data_point_heart_rate = try db.prepareWithDiags(insert_data_point_heart_rate_query, .{
             .diags = diags,
         });
 
@@ -61,7 +61,7 @@ const Statements = struct {
 
     pub fn deinit(self: *Statements) void {
         self.insert_metric.deinit();
-        self.insert_generic_data_point.deinit();
+        self.insert_data_point_generic.deinit();
     }
 };
 
@@ -119,11 +119,11 @@ fn handler(context: *Context, response: *http.Response, request: http.Request) !
                 logger.info("got {d} metrics for {s}, units: {s}", .{ data.items.len, metric.name, metric.units });
 
                 for (data.items) |item| {
-                    stmts.insert_generic_data_point.reset();
+                    stmts.insert_data_point_generic.reset();
 
                     switch (item) {
                         .generic => |dp| {
-                            try stmts.insert_generic_data_point.exec(.{}, .{
+                            try stmts.insert_data_point_generic.exec(.{}, .{
                                 .metric_id = metric_id,
                                 .@"type" = @intCast(usize, @enumToInt(HealthData.MetricDataPoint.generic)),
                                 .date = dp.date,
@@ -131,7 +131,7 @@ fn handler(context: *Context, response: *http.Response, request: http.Request) !
                             });
                         },
                         .heart_rate => |dp| {
-                            try stmts.insert_heart_rate_data_point.exec(.{}, .{
+                            try stmts.insert_data_point_heart_rate.exec(.{}, .{
                                 .metric_id = metric_id,
                                 .@"type" = @intCast(usize, @enumToInt(HealthData.MetricDataPoint.heart_rate)),
                                 .date = dp.date,
@@ -165,16 +165,39 @@ const schema: []const []const u8 = &[_][]const u8{
     \\   UNIQUE (name)
     \\ );
     ,
-    \\ CREATE TABLE IF NOT EXISTS metric_data_point(
+    \\ CREATE TABLE IF NOT EXISTS data_point_generic(
     \\   id integer PRIMARY KEY,
     \\   metric_id integer NOT NULL,
-    \\   type integer NOT NULL,
+    \\   date integer NOT NULL,
+    \\   quantity real,
+    \\   UNIQUE (id, metric_id, date),
+    \\   FOREIGN KEY (metric_id) REFERENCES metric(id)
+    \\ );
+    ,
+    \\ CREATE TABLE IF NOT EXISTS data_point_heart_rate(
+    \\   id integer PRIMARY KEY,
+    \\   metric_id integer NOT NULL,
     \\   date integer NOT NULL,
     \\   min real,
     \\   max real,
     \\   avg real,
-    \\   quantity real,
-    \\   UNIQUE (id, metric_id, type, date),
+    \\   UNIQUE (id, metric_id, date),
+    \\   FOREIGN KEY (metric_id) REFERENCES metric(id)
+    \\ );
+    ,
+    \\ CREATE TABLE IF NOT EXISTS data_point_sleep_analysis(
+    \\   id integer PRIMARY KEY,
+    \\   metric_id integer NOT NULL,
+    \\   date integer NOT NULL,
+    \\   sleep_start text NOT NULL,
+    \\   sleep_end text NOT NULL,
+    \\   sleep_source text NOT NULL,
+    \\   in_bed_start text NOT NULL,
+    \\   in_bed_end text NOT NULL,
+    \\   in_bed_source text NOT NULL,
+    \\   in_bed real NOT NULL,
+    \\   asleep real NOT NULL,
+    \\   UNIQUE (id, metric_id, date),
     \\   FOREIGN KEY (metric_id) REFERENCES metric(id)
     \\ );
 };
