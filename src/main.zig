@@ -151,6 +151,8 @@ fn handler(context: *Context, response: *http.Response, request: http.Request) !
 
                 for (data.items) |item| {
                     stmts.insert_data_point_generic.reset();
+                    stmts.insert_data_point_heart_rate.reset();
+                    stmts.insert_data_point_sleep_analysis_query.reset();
 
                     switch (item) {
                         .generic => |dp| {
