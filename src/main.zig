@@ -38,10 +38,26 @@ const Statements = struct {
         \\INSERT INTO data_point_heart_rate(metric_id, date, min, max, avg) VALUES(?{i64}, ?{[]const u8}, ?{f64}, ?{f64}, ?{f64})
         \\ON CONFLICT DO NOTHING
     ;
+    const insert_data_point_sleep_analysis_query =
+        \\INSERT INTO data_point_sleep_analysis(
+        \\  metric_id, date,
+        \\  sleep_start, sleep_end, sleep_source,
+        \\  in_bed_start, in_bed_end, in_bed_source,
+        \\  in_bed, asleep
+        \\)
+        \\VALUES(
+        \\  ?{i64}, ?{[]const u8},
+        \\  ?{[]const u8}, ?{[]const u8}, ?{[]const u8},
+        \\  ?{[]const u8}, ?{[]const u8}, ?{[]const u8},
+        \\  ?{f64}, ?{f64}
+        \\)
+        \\ON CONFLICT DO NOTHING
+    ;
 
     insert_metric: sqlite.StatementType(.{}, insert_metric_query),
     insert_data_point_generic: sqlite.StatementType(.{}, insert_data_point_generic_query),
     insert_data_point_heart_rate: sqlite.StatementType(.{}, insert_data_point_heart_rate_query),
+    insert_data_point_sleep_analysis_query: sqlite.StatementType(.{}, insert_data_point_sleep_analysis_query),
 
     fn prepare(db: *sqlite.Db, diags: *sqlite.Diagnostics) !Statements {
         var res: Statements = undefined;
@@ -55,6 +71,9 @@ const Statements = struct {
         res.insert_data_point_heart_rate = try db.prepareWithDiags(insert_data_point_heart_rate_query, .{
             .diags = diags,
         });
+        res.insert_data_point_sleep_analysis_query = try db.prepareWithDiags(insert_data_point_sleep_analysis_query, .{
+            .diags = diags,
+        });
 
         return res;
     }
@@ -62,6 +81,8 @@ const Statements = struct {
     pub fn deinit(self: *Statements) void {
         self.insert_metric.deinit();
         self.insert_data_point_generic.deinit();
+        self.insert_data_point_heart_rate.deinit();
+        self.insert_data_point_sleep_analysis_query.deinit();
     }
 };
 
@@ -139,7 +160,18 @@ fn handler(context: *Context, response: *http.Response, request: http.Request) !
                             });
                         },
                         .sleep_analysis => |dp| {
-                            _ = dp;
+                            try stmts.insert_data_point_sleep_analysis_query.exec(.{}, .{
+                                .metric_id = metric_id,
+                                .date = dp.date,
+                                .sleep_start = dp.sleep_start,
+                                .sleep_end = dp.sleep_end,
+                                .sleep_source = dp.sleep_source,
+                                .in_bed_start = dp.in_bed_start,
+                                .in_bed_end = dp.in_bed_end,
+                                .in_bed_source = dp.in_bed_source,
+                                .in_bed = dp.in_bed,
+                                .asleep = dp.asleep,
+                            });
                         },
                     }
                 }
