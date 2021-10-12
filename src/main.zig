@@ -57,8 +57,8 @@ const Statements = struct {
         \\)
         \\VALUES(
         \\  ?{i64}, strftime('%s', ?{[]const u8}),
-        \\  strftime('%s', ?{[]const u8}), strftime('%s', ?{[]const u8}), strftime('%s', ?{[]const u8}),
-        \\  strftime('%s', ?{[]const u8}), strftime('%s', ?{[]const u8}), strftime('%s', ?{[]const u8}),
+        \\  strftime('%s', ?{[]const u8}), strftime('%s', ?{[]const u8}), ?{[]const u8},
+        \\  strftime('%s', ?{[]const u8}), strftime('%s', ?{[]const u8}), ?{[]const u8},
         \\  ?{f64}, ?{f64}
         \\)
         \\ON CONFLICT DO NOTHING
