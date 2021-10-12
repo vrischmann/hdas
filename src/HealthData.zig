@@ -9,12 +9,28 @@ const Self = @This();
 
 const logger = std.log.scoped(.health_data);
 
-pub const MetricDataPoint = struct {
-    date: []const u8,
-    min: ?f64 = null,
-    max: ?f64 = null,
-    avg: ?f64 = null,
-    quantity: ?f64 = null,
+pub const MetricDataPoint = union(enum) {
+    generic: struct {
+        date: []const u8,
+        quantity: f64,
+    },
+    heart_rate: struct {
+        date: []const u8,
+        min: f64,
+        max: f64,
+        avg: f64,
+    },
+    sleep_analysis: struct {
+        date: []const u8,
+        sleep_start: []const u8,
+        sleep_end: []const u8,
+        sleep_source: []const u8,
+        in_bed_start: []const u8,
+        in_bed_end: []const u8,
+        in_bed_source: []const u8,
+        in_bed: f64,
+        asleep: f64,
+    },
 };
 
 pub const Metric = struct {
@@ -63,12 +79,13 @@ fn parseHeartRateDataPoint(allocator: *mem.Allocator, value: json.Value) ParseHe
     _ = allocator;
     switch (value) {
         .Object => |obj| {
-            return MetricDataPoint{
+            const data_point = .{
                 .date = try getAsString(obj.get("date")),
                 .min = try getAsFloat(obj.get("Min")),
                 .max = try getAsFloat(obj.get("Max")),
                 .avg = try getAsFloat(obj.get("Avg")),
             };
+            return MetricDataPoint{ .heart_rate = data_point };
         },
         else => return error.InvalidMetricBody,
     }
@@ -92,10 +109,11 @@ fn parseGenericDataPoint(allocator: *mem.Allocator, value: json.Value) ParseHead
     _ = allocator;
     switch (value) {
         .Object => |obj| {
-            return MetricDataPoint{
+            const data_point = .{
                 .date = try getAsString(obj.get("date")),
                 .quantity = try getAsFloat(obj.get("qty")),
             };
+            return MetricDataPoint{ .generic = data_point };
         },
         else => return error.InvalidMetricBody,
     }
