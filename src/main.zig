@@ -28,7 +28,8 @@ const Context = struct {
 const Statements = struct {
     const insert_metric_query =
         \\INSERT INTO metric(name, units) VALUES(?{[]const u8}, ?{[]const u8})
-        \\ON CONFLICT DO NOTHING
+        \\ON CONFLICT DO UPDATE SET units = excluded.units
+        \\RETURNING id
     ;
     const insert_data_point_generic_query =
         \\INSERT INTO data_point_generic(
@@ -137,15 +138,18 @@ fn handler(context: *Context, response: *http.Response, request: http.Request) !
 
     if (body.data.metrics) |metrics| {
         for (metrics.items) |metric| {
+            stmts.insert_metric.reset();
+
             var metric_savepoint = try context.db.savepoint("metric");
             defer metric_savepoint.rollback();
 
-            stmts.insert_metric.reset();
-            try stmts.insert_metric.exec(.{}, .{
+            const metric_id = (try stmts.insert_metric.one(i64, .{}, .{
                 .name = metric.name,
                 .units = metric.units,
-            });
-            const metric_id = context.db.getLastInsertRowID();
+            })) orelse {
+                logger.info("unable to insert or fetch metric", .{});
+                continue;
+            };
 
             if (metric.data) |data| {
                 logger.info("got {d} metrics for {s}, units: {s}", .{ data.items.len, metric.name, metric.units });
@@ -189,6 +193,12 @@ fn handler(context: *Context, response: *http.Response, request: http.Request) !
                     }
                 }
             }
+
+            // Reset all statements before committing
+            stmts.insert_metric.reset();
+            stmts.insert_data_point_generic.reset();
+            stmts.insert_data_point_heart_rate.reset();
+            stmts.insert_data_point_sleep_analysis_query.reset();
 
             metric_savepoint.commit();
         }
