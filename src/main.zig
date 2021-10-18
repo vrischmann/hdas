@@ -132,13 +132,14 @@ fn handler(context: *Context, response: *http.Response, request: http.Request) !
 
     //
 
-    try context.db.exec("BEGIN", .{}, .{});
-    errdefer {
-        context.db.exec("ROLLBACK", .{}, .{}) catch unreachable;
-    }
+    var global_savepoint = try context.db.savepoint("global");
+    defer global_savepoint.rollback();
 
     if (body.data.metrics) |metrics| {
         for (metrics.items) |metric| {
+            var metric_savepoint = try context.db.savepoint("metric");
+            defer metric_savepoint.rollback();
+
             stmts.insert_metric.reset();
             try stmts.insert_metric.exec(.{}, .{
                 .name = metric.name,
@@ -188,10 +189,12 @@ fn handler(context: *Context, response: *http.Response, request: http.Request) !
                     }
                 }
             }
+
+            metric_savepoint.commit();
         }
     }
 
-    try context.db.exec("COMMIT", .{}, .{});
+    global_savepoint.commit();
 
     //
 
