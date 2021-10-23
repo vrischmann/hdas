@@ -9,12 +9,28 @@ const Self = @This();
 
 const logger = std.log.scoped(.health_data);
 
-pub const MetricDataPoint = struct {
-    date: []const u8,
-    min: ?f64 = null,
-    max: ?f64 = null,
-    avg: ?f64 = null,
-    quantity: ?f64 = null,
+pub const MetricDataPoint = union(enum) {
+    generic: struct {
+        date: []const u8,
+        quantity: f64,
+    },
+    heart_rate: struct {
+        date: []const u8,
+        min: f64,
+        max: f64,
+        avg: f64,
+    },
+    sleep_analysis: struct {
+        date: []const u8,
+        sleep_start: []const u8,
+        sleep_end: []const u8,
+        sleep_source: []const u8,
+        in_bed_start: []const u8,
+        in_bed_end: []const u8,
+        in_bed_source: []const u8,
+        in_bed: f64,
+        asleep: f64,
+    },
 };
 
 pub const Metric = struct {
@@ -55,47 +71,89 @@ fn getAsFloat(nullable_value: ?json.Value) GetAsFloatError!f64 {
     }
 }
 
+const FixDateError = error{
+    OutOfMemory,
+    InvalidTimezoneOffset,
+};
+
+fn fixDate(allocator: *mem.Allocator, date: []const u8) FixDateError![]const u8 {
+    if (mem.count(u8, date, " ") < 2) return date;
+
+    // Expect a space here since count said there was at least 2.
+    const tz_data_start = mem.lastIndexOfScalar(u8, date, ' ') orelse unreachable;
+
+    const tz_data = date[tz_data_start + 1 ..];
+    // timezone offset always starts with + or -
+    if (tz_data[0] != '+' and tz_data[0] != '-') return error.InvalidTimezoneOffset;
+
+    // this is ugly as shit
+    const result = try mem.concat(allocator, u8, &[_][]const u8{
+        date[0..tz_data_start],
+        " ",
+        tz_data[0..3],
+        ":",
+        tz_data[3..],
+    });
+    return result;
+}
+
 const ParseHeartRateError = error{
-    InvalidMetricBody,
-} || GetAsStringError || GetAsFloatError || fmt.ParseFloatError;
+    InvalidMetricDataPointBody,
+} || GetAsStringError || GetAsFloatError || FixDateError || fmt.ParseFloatError;
 
 fn parseHeartRateDataPoint(allocator: *mem.Allocator, value: json.Value) ParseHeartRateError!MetricDataPoint {
-    _ = allocator;
     switch (value) {
         .Object => |obj| {
-            return MetricDataPoint{
-                .date = try getAsString(obj.get("date")),
+            const data_point = .{
+                .date = try fixDate(allocator, try getAsString(obj.get("date"))),
                 .min = try getAsFloat(obj.get("Min")),
                 .max = try getAsFloat(obj.get("Max")),
                 .avg = try getAsFloat(obj.get("Avg")),
             };
+            return MetricDataPoint{ .heart_rate = data_point };
         },
-        else => return error.InvalidMetricBody,
+        else => return error.InvalidMetricDataPointBody,
     }
 }
 
 const ParseSleepAnalysisError = error{
-    NotImplemented,
-} || GetAsStringError || GetAsFloatError;
+    InvalidMetricDataPointBody,
+} || GetAsStringError || GetAsFloatError || FixDateError;
 
 fn parseSleepAnalysisDataPoint(allocator: *mem.Allocator, value: json.Value) ParseSleepAnalysisError!MetricDataPoint {
     _ = allocator;
-    _ = value;
-    return error.NotImplemented;
+    switch (value) {
+        .Object => |obj| {
+            const data_point = .{
+                .date = try fixDate(allocator, try getAsString(obj.get("date"))),
+                .sleep_start = try fixDate(allocator, try getAsString(obj.get("sleepStart"))),
+                .sleep_end = try fixDate(allocator, try getAsString(obj.get("sleepEnd"))),
+                .sleep_source = try getAsString(obj.get("sleepSource")),
+                .in_bed_start = try fixDate(allocator, try getAsString(obj.get("inBedStart"))),
+                .in_bed_end = try fixDate(allocator, try getAsString(obj.get("inBedEnd"))),
+                .in_bed_source = try getAsString(obj.get("inBedSource")),
+                .in_bed = try getAsFloat(obj.get("inBed")),
+                .asleep = try getAsFloat(obj.get("asleep")),
+            };
+            return MetricDataPoint{ .sleep_analysis = data_point };
+        },
+        else => return error.InvalidMetricDataPointBody,
+    }
 }
 
 const ParseHeadphoneAudioExposureError = error{
     InvalidMetricBody,
-} || GetAsStringError || GetAsFloatError || fmt.ParseFloatError;
+} || GetAsStringError || GetAsFloatError || FixDateError || fmt.ParseFloatError;
 
 fn parseGenericDataPoint(allocator: *mem.Allocator, value: json.Value) ParseHeadphoneAudioExposureError!MetricDataPoint {
     _ = allocator;
     switch (value) {
         .Object => |obj| {
-            return MetricDataPoint{
-                .date = try getAsString(obj.get("date")),
+            const data_point = .{
+                .date = try fixDate(allocator, try getAsString(obj.get("date"))),
                 .quantity = try getAsFloat(obj.get("qty")),
             };
+            return MetricDataPoint{ .generic = data_point };
         },
         else => return error.InvalidMetricBody,
     }
