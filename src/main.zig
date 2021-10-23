@@ -7,6 +7,7 @@ const time = std.time;
 
 const argsParser = @import("args");
 const http = @import("apple_pie");
+const prometheus = @import("prometheus");
 const sqlite = @import("sqlite");
 
 const HealthData = @import("HealthData.zig");
@@ -20,12 +21,16 @@ pub const log_level: std.log.Level = switch (builtin.mode) {
 
 const logger = std.log.scoped(.main);
 
+const RegistryType = prometheus.Registry(.{});
+
 const Context = struct {
     root_allocator: *mem.Allocator,
+
     db: *sqlite.Db,
+    registry: *RegistryType,
 };
 
-const Statements = struct {
+const WriteStatements = struct {
     const insert_metric_query =
         \\INSERT INTO metric(name, units) VALUES(?{[]const u8}, ?{[]const u8})
         \\ON CONFLICT DO UPDATE SET units = excluded.units
@@ -70,8 +75,8 @@ const Statements = struct {
     insert_data_point_heart_rate: sqlite.StatementType(.{}, insert_data_point_heart_rate_query),
     insert_data_point_sleep_analysis_query: sqlite.StatementType(.{}, insert_data_point_sleep_analysis_query),
 
-    fn prepare(db: *sqlite.Db, diags: *sqlite.Diagnostics) !Statements {
-        var res: Statements = undefined;
+    fn prepare(db: *sqlite.Db, diags: *sqlite.Diagnostics) !WriteStatements {
+        var res: WriteStatements = undefined;
 
         res.insert_metric = try db.prepareWithDiags(insert_metric_query, .{
             .diags = diags,
@@ -89,7 +94,7 @@ const Statements = struct {
         return res;
     }
 
-    pub fn deinit(self: *Statements) void {
+    pub fn deinit(self: *WriteStatements) void {
         self.insert_metric.deinit();
         self.insert_data_point_generic.deinit();
         self.insert_data_point_heart_rate.deinit();
@@ -97,7 +102,16 @@ const Statements = struct {
     }
 };
 
-fn handler(context: *Context, response: *http.Response, request: http.Request) !void {
+fn handleMetrics(context: *Context, response: *http.Response, request: http.Request) !void {
+    _ = request;
+
+    var arena = heap.ArenaAllocator.init(context.root_allocator);
+    defer arena.deinit();
+
+    try context.registry.write(&arena.allocator, response.writer());
+}
+
+fn handleHealthData(context: *Context, response: *http.Response, request: http.Request) !void {
     const startHandling = time.milliTimestamp();
     defer {
         logger.info("handled request in {d}ms", .{time.milliTimestamp() - startHandling});
@@ -111,7 +125,6 @@ fn handler(context: *Context, response: *http.Response, request: http.Request) !
     response.close = true;
 
     // Validate
-
     if (request.context.method != .post) {
         try response.writeHeader(.bad_request);
         try response.writer().writeAll("Bad Request");
@@ -125,7 +138,7 @@ fn handler(context: *Context, response: *http.Response, request: http.Request) !
     // Prepare the statements
 
     var diags = sqlite.Diagnostics{};
-    var stmts = Statements.prepare(context.db, &diags) catch |err| {
+    var stmts = WriteStatements.prepare(context.db, &diags) catch |err| {
         logger.err("unable to prepare statements, err: {s}, diagnostics: {s}", .{ err, diags });
         return err;
     };
@@ -314,11 +327,17 @@ pub fn main() anyerror!void {
         };
     }
 
+    // Initialize the Prometheus registry
+
+    var registry = try RegistryType.create(allocator);
+    defer registry.destroy();
+
     //
 
     var context: Context = .{
         .root_allocator = allocator,
         .db = &db,
+        .registry = registry,
     };
 
     logger.info("listening on {s}:{d}\n", .{ listen_addr, listen_port });
@@ -327,6 +346,9 @@ pub fn main() anyerror!void {
         allocator,
         try std.net.Address.parseIp(listen_addr, listen_port),
         &context,
-        handler,
+        comptime http.router.Router(*Context, &.{
+            http.router.get("/health_data", handleHealthData),
+            http.router.get("/metrics", handleMetrics),
+        }),
     );
 }
