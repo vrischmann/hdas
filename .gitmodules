@@ -3,10 +3,10 @@
 	url = https://github.com/vrischmann/zig-sqlite
 [submodule "third_party/zig-args"]
 	path = third_party/zig-args
-	url = https://github.com/MasterQ32/zig-args.git
+	url = https://github.com/vrischmann/zig-args.git
 [submodule "third_party/prometheus"]
 	path = third_party/zig-prometheus
 	url = https://github.com/vrischmann/zig-prometheus
 [submodule "third_party/apple_pie"]
 	path = third_party/apple_pie
-	url = git@github.com:vrischmann/apple_pie.git
+	url = https://github.com/vrischmann/apple_pie.git
