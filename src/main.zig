@@ -347,7 +347,7 @@ pub fn main() anyerror!void {
         try std.net.Address.parseIp(listen_addr, listen_port),
         &context,
         comptime http.router.Router(*Context, &.{
-            http.router.get("/health_data", handleHealthData),
+            http.router.post("/health_data", handleHealthData),
             http.router.get("/metrics", handleMetrics),
         }),
     );
