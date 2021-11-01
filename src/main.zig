@@ -12,6 +12,8 @@ const prometheus = @import("prometheus");
 const sqlite = @import("sqlite");
 
 const HealthData = @import("HealthData.zig");
+const Exporter = @import("Exporter.zig");
+const Handlers = @import("Handlers.zig");
 
 pub const log_level: std.log.Level = switch (builtin.mode) {
     .Debug => .debug,
@@ -22,223 +24,7 @@ pub const log_level: std.log.Level = switch (builtin.mode) {
 
 const logger = std.log.scoped(.main);
 
-const RegistryType = prometheus.Registry(.{});
-
-const Context = struct {
-    root_allocator: *mem.Allocator,
-
-    db: *sqlite.Db,
-    registry: *RegistryType,
-
-    debug: struct {
-        dump_request: bool = false,
-    } = .{},
-};
-
-const WriteStatements = struct {
-    const insert_metric_query =
-        \\INSERT INTO metric(name, units) VALUES(?{[]const u8}, ?{[]const u8})
-        \\ON CONFLICT DO UPDATE SET units = excluded.units
-        \\RETURNING id
-    ;
-    const insert_data_point_generic_query =
-        \\INSERT INTO data_point_generic(
-        \\  metric_id, date, quantity
-        \\)
-        \\VALUES(
-        \\  ?{i64}, strftime('%s', ?{[]const u8}), ?{f64}
-        \\)
-        \\ON CONFLICT DO NOTHING
-    ;
-    const insert_data_point_heart_rate_query =
-        \\INSERT INTO data_point_heart_rate(
-        \\  metric_id, date, min, max, avg
-        \\)
-        \\VALUES(
-        \\  ?{i64}, strftime('%s', ?{[]const u8}), ?{f64}, ?{f64}, ?{f64}
-        \\)
-        \\ON CONFLICT DO NOTHING
-    ;
-    const insert_data_point_sleep_analysis_query =
-        \\INSERT INTO data_point_sleep_analysis(
-        \\  metric_id, date,
-        \\  sleep_start, sleep_end, sleep_source,
-        \\  in_bed_start, in_bed_end, in_bed_source,
-        \\  in_bed, asleep
-        \\)
-        \\VALUES(
-        \\  ?{i64}, strftime('%s', ?{[]const u8}),
-        \\  strftime('%s', ?{[]const u8}), strftime('%s', ?{[]const u8}), ?{[]const u8},
-        \\  strftime('%s', ?{[]const u8}), strftime('%s', ?{[]const u8}), ?{[]const u8},
-        \\  ?{f64}, ?{f64}
-        \\)
-        \\ON CONFLICT DO NOTHING
-    ;
-
-    insert_metric: sqlite.StatementType(.{}, insert_metric_query),
-    insert_data_point_generic: sqlite.StatementType(.{}, insert_data_point_generic_query),
-    insert_data_point_heart_rate: sqlite.StatementType(.{}, insert_data_point_heart_rate_query),
-    insert_data_point_sleep_analysis_query: sqlite.StatementType(.{}, insert_data_point_sleep_analysis_query),
-
-    fn prepare(db: *sqlite.Db, diags: *sqlite.Diagnostics) !WriteStatements {
-        var res: WriteStatements = undefined;
-
-        res.insert_metric = try db.prepareWithDiags(insert_metric_query, .{
-            .diags = diags,
-        });
-        res.insert_data_point_generic = try db.prepareWithDiags(insert_data_point_generic_query, .{
-            .diags = diags,
-        });
-        res.insert_data_point_heart_rate = try db.prepareWithDiags(insert_data_point_heart_rate_query, .{
-            .diags = diags,
-        });
-        res.insert_data_point_sleep_analysis_query = try db.prepareWithDiags(insert_data_point_sleep_analysis_query, .{
-            .diags = diags,
-        });
-
-        return res;
-    }
-
-    pub fn deinit(self: *WriteStatements) void {
-        self.insert_metric.deinit();
-        self.insert_data_point_generic.deinit();
-        self.insert_data_point_heart_rate.deinit();
-        self.insert_data_point_sleep_analysis_query.deinit();
-    }
-};
-
-fn handleMetrics(context: *Context, response: *http.Response, request: http.Request) !void {
-    _ = request;
-
-    var arena = heap.ArenaAllocator.init(context.root_allocator);
-    defer arena.deinit();
-
-    try context.registry.write(&arena.allocator, response.writer());
-}
-
-fn handleHealthData(context: *Context, response: *http.Response, request: http.Request) !void {
-    const startHandling = time.milliTimestamp();
-    defer {
-        logger.info("handled request in {d}ms", .{time.milliTimestamp() - startHandling});
-    }
-
-    var arena = heap.ArenaAllocator.init(context.root_allocator);
-    defer arena.deinit();
-    const allocator = &arena.allocator;
-
-    // Always close the connection
-    response.close = true;
-
-    // Validate
-    if (request.context.method != .post) {
-        try response.writeHeader(.bad_request);
-        try response.writer().writeAll("Bad Request");
-        return;
-    }
-
-    // Parse the body
-
-    if (context.debug.dump_request) {
-        var buf: [128]u8 = undefined;
-        const path = try fmt.bufPrint(&buf, "health_data_{d}.json", .{time.milliTimestamp()});
-
-        var file = try std.fs.cwd().createFile(path, .{});
-        defer file.close();
-        try file.writeAll(request.body());
-    }
-
-    var body = try HealthData.parse(allocator, request.body());
-    defer body.deinit();
-
-    // Prepare the statements
-
-    var diags = sqlite.Diagnostics{};
-    var stmts = WriteStatements.prepare(context.db, &diags) catch |err| {
-        logger.err("unable to prepare statements, err: {s}, diagnostics: {s}", .{ err, diags });
-        return err;
-    };
-    defer stmts.deinit();
-
-    //
-
-    var global_savepoint = try context.db.savepoint("global");
-    defer global_savepoint.rollback();
-
-    if (body.data.metrics) |metrics| {
-        for (metrics.items) |metric| {
-            stmts.insert_metric.reset();
-
-            var metric_savepoint = try context.db.savepoint("metric");
-            defer metric_savepoint.rollback();
-
-            const metric_id = (try stmts.insert_metric.one(i64, .{}, .{
-                .name = metric.name,
-                .units = metric.units,
-            })) orelse {
-                logger.info("unable to insert or fetch metric", .{});
-                continue;
-            };
-
-            if (metric.data) |data| {
-                logger.info("got {d} metrics for {s}, units: {s}", .{ data.items.len, metric.name, metric.units });
-
-                for (data.items) |item| {
-                    stmts.insert_data_point_generic.reset();
-                    stmts.insert_data_point_heart_rate.reset();
-                    stmts.insert_data_point_sleep_analysis_query.reset();
-
-                    switch (item) {
-                        .generic => |dp| {
-                            try stmts.insert_data_point_generic.exec(.{}, .{
-                                .metric_id = metric_id,
-                                .date = dp.date,
-                                .quantity = dp.quantity,
-                            });
-                        },
-                        .heart_rate => |dp| {
-                            try stmts.insert_data_point_heart_rate.exec(.{}, .{
-                                .metric_id = metric_id,
-                                .date = dp.date,
-                                .min = dp.min,
-                                .max = dp.max,
-                                .avg = dp.avg,
-                            });
-                        },
-                        .sleep_analysis => |dp| {
-                            try stmts.insert_data_point_sleep_analysis_query.exec(.{}, .{
-                                .metric_id = metric_id,
-                                .date = dp.date,
-                                .sleep_start = dp.sleep_start,
-                                .sleep_end = dp.sleep_end,
-                                .sleep_source = dp.sleep_source,
-                                .in_bed_start = dp.in_bed_start,
-                                .in_bed_end = dp.in_bed_end,
-                                .in_bed_source = dp.in_bed_source,
-                                .in_bed = dp.in_bed,
-                                .asleep = dp.asleep,
-                            });
-                        },
-                    }
-                }
-            }
-
-            // Reset all statements before committing
-            stmts.insert_metric.reset();
-            stmts.insert_data_point_generic.reset();
-            stmts.insert_data_point_heart_rate.reset();
-            stmts.insert_data_point_sleep_analysis_query.reset();
-
-            metric_savepoint.commit();
-        }
-    }
-
-    global_savepoint.commit();
-
-    //
-
-    try response.writeHeader(.accepted);
-    try response.writer().writeAll("Accepted");
-}
+pub const RegistryType = prometheus.Registry(.{});
 
 const schema: []const []const u8 = &[_][]const u8{
     \\ CREATE TABLE IF NOT EXISTS metric(
@@ -320,6 +106,9 @@ pub fn main() anyerror!void {
         @"listen-addr": []const u8 = "127.0.0.1",
         @"listen-port": u16 = 5804,
 
+        @"victoria-metrics-addr": []const u8 = "127.0.0.1",
+        @"victoria-metrics-port": u16 = 8428,
+
         @"database-path": ?[:0]const u8 = null,
 
         @"debug-dump-request": bool = false,
@@ -344,6 +133,14 @@ pub fn main() anyerror!void {
         };
     }
 
+    // Initialize and start the Victoria exporter
+
+    var exporter = try Exporter.init(allocator, &db);
+    defer exporter.deinit();
+
+    var exporter_thread = try std.Thread.spawn(.{}, Exporter.run, .{&exporter});
+    defer exporter_thread.join();
+
     // Initialize the Prometheus registry
 
     var registry = try RegistryType.create(allocator);
@@ -351,7 +148,7 @@ pub fn main() anyerror!void {
 
     //
 
-    var context: Context = .{
+    var context: Handlers.Context = .{
         .root_allocator = allocator,
         .db = &db,
         .registry = registry,
@@ -369,9 +166,9 @@ pub fn main() anyerror!void {
         allocator,
         try std.net.Address.parseIp(listen_addr, listen_port),
         &context,
-        comptime http.router.Router(*Context, &.{
-            http.router.post("/health_data", handleHealthData),
-            http.router.get("/metrics", handleMetrics),
+        comptime http.router.Router(*Handlers.Context, &.{
+            http.router.post("/health_data", Handlers.handleHealthData),
+            http.router.get("/metrics", Handlers.handleMetrics),
         }),
     );
 }
