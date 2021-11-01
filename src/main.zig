@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 const heap = std.heap;
 const json = std.json;
 const mem = std.mem;
+const fmt = std.fmt;
 const time = std.time;
 
 const argsParser = @import("args");
@@ -28,6 +29,10 @@ const Context = struct {
 
     db: *sqlite.Db,
     registry: *RegistryType,
+
+    debug: struct {
+        dump_request: bool = false,
+    } = .{},
 };
 
 const WriteStatements = struct {
@@ -133,7 +138,17 @@ fn handleHealthData(context: *Context, response: *http.Response, request: http.R
 
     // Parse the body
 
-    const body = try HealthData.parse(allocator, request.body());
+    if (context.debug.dump_request) {
+        var buf: [128]u8 = undefined;
+        const path = try fmt.bufPrint(&buf, "health_data_{d}.json", .{time.milliTimestamp()});
+
+        var file = try std.fs.cwd().createFile(path, .{});
+        defer file.close();
+        try file.writeAll(request.body());
+    }
+
+    var body = try HealthData.parse(allocator, request.body());
+    defer body.deinit();
 
     // Prepare the statements
 
@@ -306,6 +321,8 @@ pub fn main() anyerror!void {
         @"listen-port": u16 = 5804,
 
         @"database-path": ?[:0]const u8 = null,
+
+        @"debug-dump-request": bool = false,
     }, allocator, .print);
     defer options.deinit();
 
@@ -338,9 +355,15 @@ pub fn main() anyerror!void {
         .root_allocator = allocator,
         .db = &db,
         .registry = registry,
+        .debug = .{
+            .dump_request = options.options.@"debug-dump-request",
+        },
     };
 
-    logger.info("listening on {s}:{d}\n", .{ listen_addr, listen_port });
+    logger.info("listening on {s}:{d}", .{ listen_addr, listen_port });
+    if (context.debug.dump_request) {
+        logger.info("dumping all request bodies in current directory", .{});
+    }
 
     try http.listenAndServe(
         allocator,
