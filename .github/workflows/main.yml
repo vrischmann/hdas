@@ -29,7 +29,6 @@ jobs:
       - uses: goto-bus-stop/setup-zig@v1
         with:
           version: master
-      - uses: nektro/actions-setup-zigmod@v1
 
       - name: Cache zig-cache
         uses: actions/cache@v2
