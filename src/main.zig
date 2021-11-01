@@ -39,6 +39,7 @@ const schema: []const []const u8 = &[_][]const u8{
     \\   metric_id integer NOT NULL,
     \\   date integer NOT NULL,
     \\   quantity real,
+    \\   exported integer NOT NULL DEFAULT 0,
     \\   UNIQUE (id, metric_id, date),
     \\   FOREIGN KEY (metric_id) REFERENCES metric(id)
     \\ );
@@ -50,6 +51,7 @@ const schema: []const []const u8 = &[_][]const u8{
     \\   min real,
     \\   max real,
     \\   avg real,
+    \\   exported integer NOT NULL DEFAULT 0,
     \\   UNIQUE (id, metric_id, date),
     \\   FOREIGN KEY (metric_id) REFERENCES metric(id)
     \\ );
@@ -66,6 +68,7 @@ const schema: []const []const u8 = &[_][]const u8{
     \\   in_bed_source text NOT NULL,
     \\   in_bed real NOT NULL,
     \\   asleep real NOT NULL,
+    \\   exported integer NOT NULL DEFAULT 0,
     \\   UNIQUE (id, metric_id, date),
     \\   FOREIGN KEY (metric_id) REFERENCES metric(id)
     \\ );
