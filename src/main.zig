@@ -147,7 +147,8 @@ fn handleHealthData(context: *Context, response: *http.Response, request: http.R
         try file.writeAll(request.body());
     }
 
-    const body = try HealthData.parse(allocator, request.body());
+    var body = try HealthData.parse(allocator, request.body());
+    defer body.deinit();
 
     // Prepare the statements
 

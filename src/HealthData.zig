@@ -201,18 +201,17 @@ data: struct {
     metrics: ?std.ArrayList(Metric) = null,
 } = .{},
 
+parser: json.Parser,
+tree: json.ValueTree,
+
 pub fn parse(allocator: *mem.Allocator, body: []const u8) !Self {
     var parser = json.Parser.init(allocator, false);
-    defer parser.deinit();
+    var res = Self{
+        .parser = parser,
+        .tree = try parser.parse(body),
+    };
 
-    var tree = try parser.parse(body);
-    defer tree.deinit();
-
-    //
-
-    var res = Self{};
-
-    const data_value = switch (tree.root) {
+    const data_value = switch (res.tree.root) {
         .Object => |obj| obj.get("data"),
         else => return error.InvalidBody,
     } orelse return error.InvalidBody;
@@ -237,6 +236,11 @@ pub fn parse(allocator: *mem.Allocator, body: []const u8) !Self {
     }
 
     return res;
+}
+
+pub fn deinit(self: *Self) void {
+    self.tree.deinit();
+    self.parser.deinit();
 }
 
 test "parse" {
