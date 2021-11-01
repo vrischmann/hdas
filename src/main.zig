@@ -1,9 +1,10 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const fmt = std.fmt;
 const heap = std.heap;
 const json = std.json;
 const mem = std.mem;
-const fmt = std.fmt;
+const net = std.net;
 const time = std.time;
 
 const argsParser = @import("args");
@@ -109,17 +110,14 @@ pub fn main() anyerror!void {
         @"listen-addr": []const u8 = "127.0.0.1",
         @"listen-port": u16 = 5804,
 
-        @"victoria-metrics-addr": []const u8 = "127.0.0.1",
-        @"victoria-metrics-port": u16 = 8428,
+        @"victoria-addr": []const u8 = "127.0.0.1",
+        @"victoria-port": u16 = 4242,
 
         @"database-path": ?[:0]const u8 = null,
 
         @"debug-dump-request": bool = false,
     }, allocator, .print);
     defer options.deinit();
-
-    const listen_addr = options.options.@"listen-addr";
-    const listen_port = options.options.@"listen-port";
 
     //
 
@@ -138,7 +136,11 @@ pub fn main() anyerror!void {
 
     // Initialize and start the Victoria exporter
 
-    var exporter = try Exporter.init(allocator, &db);
+    var exporter = try Exporter.init(
+        allocator,
+        &db,
+        try net.Address.parseIp(options.options.@"victoria-addr", options.options.@"victoria-port"),
+    );
     defer exporter.deinit();
 
     var exporter_thread = try std.Thread.spawn(.{}, Exporter.run, .{&exporter});
@@ -160,14 +162,14 @@ pub fn main() anyerror!void {
         },
     };
 
-    logger.info("listening on {s}:{d}", .{ listen_addr, listen_port });
+    logger.info("listening on {s}:{d}", .{ options.options.@"listen-addr", options.options.@"listen-port" });
     if (context.debug.dump_request) {
         logger.info("dumping all request bodies in current directory", .{});
     }
 
     try http.listenAndServe(
         allocator,
-        try std.net.Address.parseIp(listen_addr, listen_port),
+        try net.Address.parseIp(options.options.@"listen-addr", options.options.@"listen-port"),
         &context,
         comptime http.router.Router(*Handlers.Context, &.{
             http.router.post("/health_data", Handlers.handleHealthData),
