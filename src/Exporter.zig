@@ -78,6 +78,7 @@ fn doExport(self: *Self) !void {
     try self.exportGeneric(writer, &stmts, .resting_heart_rate);
     try self.exportGeneric(writer, &stmts, .walking_running_distance);
     try self.exportGeneric(writer, &stmts, .walking_speed);
+    try self.exportSleepAnalysis(writer, &stmts);
 }
 
 // TODO(vincent): merge both functions ? they're quite similar.
@@ -88,8 +89,8 @@ fn exportHeartRate(self: *Self, writer: net.Stream.Writer, stmts: *Statements) !
     defer ids.deinit();
 
     // Export all data points
-    stmts.get_heart_rate_data_points.reset();
-    var iter = try stmts.get_heart_rate_data_points.iterator(
+    stmts.get_heart_rate_data_point.reset();
+    var iter = try stmts.get_heart_rate_data_point.iterator(
         struct {
             id: usize,
             value: f64,
@@ -127,7 +128,7 @@ fn exportGeneric(self: *Self, writer: net.Stream.Writer, stmts: *Statements, com
     var ids = try std.ArrayList(usize).initCapacity(self.allocator, 64);
     defer ids.deinit();
 
-    // Export all data points
+    // Export all data point
     stmts.get_generic_data_point.reset();
     var iter = try stmts.get_generic_data_point.iterator(
         struct {
@@ -147,7 +148,7 @@ fn exportGeneric(self: *Self, writer: net.Stream.Writer, stmts: *Statements, com
         });
         try ids.append(row.id);
     }
-    logger.info("exported {d} " ++ @tagName(metric_name) ++ " data points", .{ids.items.len});
+    logger.info("exported {d} " ++ @tagName(metric_name) ++ " data point", .{ids.items.len});
 
     // Mark the data point as exported
 
@@ -164,12 +165,65 @@ fn exportGeneric(self: *Self, writer: net.Stream.Writer, stmts: *Statements, com
     global_savepoint.commit();
 }
 
+fn exportSleepAnalysis(self: *Self, writer: net.Stream.Writer, stmts: *Statements) !void {
+    // Store the data point ids to mark as exported next.
+    var ids = try std.ArrayList(usize).initCapacity(self.allocator, 64);
+    defer ids.deinit();
+
+    // Export all data point
+    stmts.get_sleep_analysis_data_point.reset();
+    var iter = try stmts.get_sleep_analysis_data_point.iterator(
+        struct {
+            id: usize,
+            in_bed: f64,
+            asleep: f64,
+            date: usize,
+        },
+        .{},
+    );
+
+    while (try iter.next(.{})) |row| {
+        try writer.print("put health_data_sleep_analysis {d} {d} type=in_bed\n", .{
+            row.date,
+            row.in_bed,
+        });
+        try writer.print("put health_data_sleep_analysis {d} {d} type=asleep\n", .{
+            row.date,
+            row.asleep,
+        });
+        try ids.append(row.id);
+    }
+    logger.info("exported {d} sleep_analysis data points", .{ids.items.len});
+
+    // Mark the data point as exported
+
+    var global_savepoint = try self.db.savepoint("global");
+    defer global_savepoint.rollback();
+
+    for (ids.items) |id| {
+        stmts.mark_sleep_analysis_as_exported.reset();
+        try stmts.mark_sleep_analysis_as_exported.exec(.{}, .{
+            .id = id,
+        });
+    }
+
+    global_savepoint.commit();
+}
+
 const Statements = struct {
-    const get_heart_rate_data_points_query =
+    const get_heart_rate_data_point_query =
         \\SELECT d.id, d.max, d.date
         \\FROM data_point_heart_rate d
         \\INNER JOIN metric m ON d.metric_id = m.id
         \\WHERE m.name = 'heart_rate'
+        \\AND d.exported = 0
+    ;
+
+    const get_sleep_analysis_data_point_query =
+        \\SELECT d.id, d.in_bed, d.asleep, d.date
+        \\FROM data_point_sleep_analysis d
+        \\INNER JOIN metric m ON d.metric_id = m.id
+        \\WHERE m.name = 'sleep_analysis'
         \\AND d.exported = 0
     ;
 
@@ -186,27 +240,40 @@ const Statements = struct {
         \\SET exported = 1
         \\WHERE id = ?{usize}
     ;
+    const mark_sleep_analysis_as_exported_query =
+        \\UPDATE data_point_sleep_analysis
+        \\SET exported = 1
+        \\WHERE id = ?{usize}
+    ;
     const mark_generic_as_exported_query =
         \\UPDATE data_point_generic
         \\SET exported = 1
         \\WHERE id = ?{usize}
     ;
 
-    get_heart_rate_data_points: sqlite.StatementType(.{}, get_heart_rate_data_points_query),
+    get_heart_rate_data_point: sqlite.StatementType(.{}, get_heart_rate_data_point_query),
+    get_sleep_analysis_data_point: sqlite.StatementType(.{}, get_sleep_analysis_data_point_query),
     get_generic_data_point: sqlite.StatementType(.{}, get_generic_data_point_query),
     mark_heart_rate_as_exported: sqlite.StatementType(.{}, mark_heart_rate_as_exported_query),
+    mark_sleep_analysis_as_exported: sqlite.StatementType(.{}, mark_sleep_analysis_as_exported_query),
     mark_generic_as_exported: sqlite.StatementType(.{}, mark_generic_as_exported_query),
 
     fn prepare(db: *sqlite.Db, diags: *sqlite.Diagnostics) !Statements {
         var res: Statements = undefined;
 
-        res.get_heart_rate_data_points = try db.prepareWithDiags(get_heart_rate_data_points_query, .{
+        res.get_heart_rate_data_point = try db.prepareWithDiags(get_heart_rate_data_point_query, .{
+            .diags = diags,
+        });
+        res.get_sleep_analysis_data_point = try db.prepareWithDiags(get_sleep_analysis_data_point_query, .{
             .diags = diags,
         });
         res.get_generic_data_point = try db.prepareWithDiags(get_generic_data_point_query, .{
             .diags = diags,
         });
         res.mark_heart_rate_as_exported = try db.prepareWithDiags(mark_heart_rate_as_exported_query, .{
+            .diags = diags,
+        });
+        res.mark_sleep_analysis_as_exported = try db.prepareWithDiags(mark_sleep_analysis_as_exported_query, .{
             .diags = diags,
         });
         res.mark_generic_as_exported = try db.prepareWithDiags(mark_generic_as_exported_query, .{
@@ -217,7 +284,7 @@ const Statements = struct {
     }
 
     fn deinit(self: *Statements) void {
-        self.get_heart_rate_data_points.deinit();
+        self.get_heart_rate_data_point.deinit();
         self.get_generic_data_point.deinit();
         self.mark_heart_rate_as_exported.deinit();
         self.mark_generic_as_exported.deinit();
