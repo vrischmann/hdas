@@ -73,14 +73,22 @@ fn doExport(self: *Self) !void {
     var writer = stream.writer();
 
     try self.exportHeartRate(writer, &stmts);
+    try self.exportGeneric(writer, &stmts, .weight_body_mass);
+    try self.exportGeneric(writer, &stmts, .walking_heart_rate_average);
+    try self.exportGeneric(writer, &stmts, .resting_heart_rate);
+    try self.exportGeneric(writer, &stmts, .walking_running_distance);
+    try self.exportGeneric(writer, &stmts, .walking_speed);
 }
+
+// TODO(vincent): merge both functions ? they're quite similar.
 
 fn exportHeartRate(self: *Self, writer: net.Stream.Writer, stmts: *Statements) !void {
     // Store the data point ids to mark as exported next.
     var ids = try std.ArrayList(usize).initCapacity(self.allocator, 64);
     defer ids.deinit();
 
-    // Exporter all data points
+    // Export all data points
+    stmts.get_heart_rate_data_points.reset();
     var iter = try stmts.get_heart_rate_data_points.iterator(
         struct {
             id: usize,
@@ -97,7 +105,7 @@ fn exportHeartRate(self: *Self, writer: net.Stream.Writer, stmts: *Statements) !
         });
         try ids.append(row.id);
     }
-    logger.info("exported {d} data points", .{ids.items.len});
+    logger.info("exported {d} heart_rate data points", .{ids.items.len});
 
     // Mark the data point as exported
 
@@ -114,6 +122,48 @@ fn exportHeartRate(self: *Self, writer: net.Stream.Writer, stmts: *Statements) !
     global_savepoint.commit();
 }
 
+fn exportGeneric(self: *Self, writer: net.Stream.Writer, stmts: *Statements, comptime metric_name: @Type(.EnumLiteral)) !void {
+    // Store the data point ids to mark as exported next.
+    var ids = try std.ArrayList(usize).initCapacity(self.allocator, 64);
+    defer ids.deinit();
+
+    // Export all data points
+    stmts.get_generic_data_point.reset();
+    var iter = try stmts.get_generic_data_point.iterator(
+        struct {
+            id: usize,
+            value: f64,
+            date: usize,
+        },
+        .{
+            .name = @as([]const u8, @tagName(metric_name)),
+        },
+    );
+
+    while (try iter.next(.{})) |row| {
+        try writer.print("put health_data_" ++ @tagName(metric_name) ++ " {d} {d} \n", .{
+            row.date,
+            row.value,
+        });
+        try ids.append(row.id);
+    }
+    logger.info("exported {d} " ++ @tagName(metric_name) ++ " data points", .{ids.items.len});
+
+    // Mark the data point as exported
+
+    var global_savepoint = try self.db.savepoint("global");
+    defer global_savepoint.rollback();
+
+    for (ids.items) |id| {
+        stmts.mark_generic_as_exported.reset();
+        try stmts.mark_generic_as_exported.exec(.{}, .{
+            .id = id,
+        });
+    }
+
+    global_savepoint.commit();
+}
+
 const Statements = struct {
     const get_heart_rate_data_points_query =
         \\SELECT d.id, d.max, d.date
@@ -123,18 +173,11 @@ const Statements = struct {
         \\AND d.exported = 0
     ;
 
-    const get_resting_heart_rate_data_points_query =
+    const get_generic_data_point_query =
         \\SELECT d.id, d.quantity, d.date
         \\FROM data_point_generic d
         \\INNER JOIN metric m ON d.metric_id = m.id
-        \\WHERE m.name = 'resting_heart_rate'
-        \\AND d.exported = 0
-    ;
-    const get_walking_heart_rate_avg_data_points_query =
-        \\SELECT d.id, d.quantity, d.date
-        \\FROM data_point_generic d
-        \\INNER JOIN metric m ON d.metric_id = m.id
-        \\WHERE m.name = 'walking_heart_rate_average'
+        \\WHERE m.name = ?{[]const u8}
         \\AND d.exported = 0
     ;
 
@@ -150,8 +193,7 @@ const Statements = struct {
     ;
 
     get_heart_rate_data_points: sqlite.StatementType(.{}, get_heart_rate_data_points_query),
-    get_resting_heart_rate_data_points: sqlite.StatementType(.{}, get_resting_heart_rate_data_points_query),
-    get_walking_heart_rate_avg_data_points: sqlite.StatementType(.{}, get_walking_heart_rate_avg_data_points_query),
+    get_generic_data_point: sqlite.StatementType(.{}, get_generic_data_point_query),
     mark_heart_rate_as_exported: sqlite.StatementType(.{}, mark_heart_rate_as_exported_query),
     mark_generic_as_exported: sqlite.StatementType(.{}, mark_generic_as_exported_query),
 
@@ -161,10 +203,7 @@ const Statements = struct {
         res.get_heart_rate_data_points = try db.prepareWithDiags(get_heart_rate_data_points_query, .{
             .diags = diags,
         });
-        res.get_resting_heart_rate_data_points = try db.prepareWithDiags(get_resting_heart_rate_data_points_query, .{
-            .diags = diags,
-        });
-        res.get_walking_heart_rate_avg_data_points = try db.prepareWithDiags(get_walking_heart_rate_avg_data_points_query, .{
+        res.get_generic_data_point = try db.prepareWithDiags(get_generic_data_point_query, .{
             .diags = diags,
         });
         res.mark_heart_rate_as_exported = try db.prepareWithDiags(mark_heart_rate_as_exported_query, .{
@@ -179,8 +218,7 @@ const Statements = struct {
 
     fn deinit(self: *Statements) void {
         self.get_heart_rate_data_points.deinit();
-        self.get_resting_heart_rate_data_points.deinit();
-        self.get_walking_heart_rate_avg_data_points.deinit();
+        self.get_generic_data_point.deinit();
         self.mark_heart_rate_as_exported.deinit();
         self.mark_generic_as_exported.deinit();
     }

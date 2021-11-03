@@ -58,16 +58,24 @@ pub fn handleHealthData(context: *Context, response: *http.Response, request: ht
 
     // Parse the body
 
+    const raw_body = request.body();
+
     if (context.debug.dump_request) {
         var buf: [128]u8 = undefined;
         const path = try fmt.bufPrint(&buf, "health_data_{d}.json", .{time.milliTimestamp()});
 
         var file = try std.fs.cwd().createFile(path, .{});
         defer file.close();
-        try file.writeAll(request.body());
+        try file.writeAll(raw_body);
     }
 
-    var body = try HealthData.parse(allocator, request.body());
+    var body = HealthData.parse(allocator, raw_body) catch |err| {
+        logger.err("unable to parse body {s}, err: {s}", .{
+            fmt.fmtSliceEscapeLower(raw_body),
+            err,
+        });
+        return err;
+    };
     defer body.deinit();
 
     // Prepare the statements
