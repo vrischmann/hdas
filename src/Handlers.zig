@@ -69,12 +69,18 @@ pub fn handleHealthData(context: *Context, response: *http.Response, request: ht
         try file.writeAll(raw_body);
     }
 
-    var body = HealthData.parse(allocator, raw_body) catch |err| {
-        logger.err("unable to parse body {s}, err: {s}", .{
-            fmt.fmtSliceEscapeLower(raw_body),
-            err,
-        });
-        return err;
+    var body = HealthData.parse(allocator, raw_body) catch |err| switch (err) {
+        error.UnexpectedEndOfJson => {
+            logger.warn("invalid json {s}", .{fmt.fmtSliceEscapeLower(raw_body)});
+            return;
+        },
+        else => {
+            logger.err("unable to parse body {s}, err: {s}", .{
+                fmt.fmtSliceEscapeLower(raw_body),
+                err,
+            });
+            return err;
+        },
     };
     defer body.deinit();
 
