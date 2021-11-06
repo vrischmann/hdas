@@ -23,6 +23,8 @@ addr: net.Address,
 stream: ?net.Stream = null,
 
 pub fn init(allocator: *mem.Allocator, db: *sqlite.Db, addr: net.Address) !Self {
+    logger.info("exporting to {s}", .{addr});
+
     var res = Self{
         .allocator = allocator,
         .db = db,
