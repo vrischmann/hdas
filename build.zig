@@ -42,7 +42,7 @@ pub fn build(b: *std.build.Builder) void {
 
     //
 
-    const exe = b.addExecutable("hda", "src/main.zig");
+    const exe = b.addExecutable("hdas", "src/main.zig");
     exe.setTarget(target);
     exe.setBuildMode(mode);
     exe.addIncludeDir("third_party/zig-sqlite/c");
