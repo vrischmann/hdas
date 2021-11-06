@@ -49,7 +49,7 @@ fn doExport(self: *Self) !void {
     defer {
         logger.info("exported data in {d}ms", .{time.milliTimestamp() - start});
     }
-    logger.info("exporting data", .{});
+    logger.debug("exporting data", .{});
 
     // Try to connect to Victoria
     self.stream = net.tcpConnectToAddress(self.addr) catch |err| {
@@ -106,7 +106,7 @@ fn exportHeartRate(self: *Self, writer: net.Stream.Writer, stmts: *Statements) !
         });
         try ids.append(row.id);
     }
-    logger.info("exported {d} heart_rate data points", .{ids.items.len});
+    logger.debug("exported {d} heart_rate data points", .{ids.items.len});
 
     // Mark the data point as exported
 
@@ -148,7 +148,7 @@ fn exportGeneric(self: *Self, writer: net.Stream.Writer, stmts: *Statements, com
         });
         try ids.append(row.id);
     }
-    logger.info("exported {d} " ++ @tagName(metric_name) ++ " data point", .{ids.items.len});
+    logger.debug("exported {d} " ++ @tagName(metric_name) ++ " data point", .{ids.items.len});
 
     // Mark the data point as exported
 
@@ -193,7 +193,7 @@ fn exportSleepAnalysis(self: *Self, writer: net.Stream.Writer, stmts: *Statement
         });
         try ids.append(row.id);
     }
-    logger.info("exported {d} sleep_analysis data points", .{ids.items.len});
+    logger.debug("exported {d} sleep_analysis data points", .{ids.items.len});
 
     // Mark the data point as exported
 
