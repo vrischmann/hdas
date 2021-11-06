@@ -48,9 +48,6 @@ pub fn run(self: *Self) !void {
 
 fn doExport(self: *Self) !void {
     const start = time.milliTimestamp();
-    defer {
-        logger.info("exported data in {d}ms", .{time.milliTimestamp() - start});
-    }
     logger.debug("exporting data", .{});
 
     // Try to connect to Victoria
@@ -74,18 +71,22 @@ fn doExport(self: *Self) !void {
     var stream = self.stream.?;
     var writer = stream.writer();
 
-    try self.exportHeartRate(writer, &stmts);
-    try self.exportGeneric(writer, &stmts, .weight_body_mass);
-    try self.exportGeneric(writer, &stmts, .walking_heart_rate_average);
-    try self.exportGeneric(writer, &stmts, .resting_heart_rate);
-    try self.exportGeneric(writer, &stmts, .walking_running_distance);
-    try self.exportGeneric(writer, &stmts, .walking_speed);
-    try self.exportSleepAnalysis(writer, &stmts);
+    var exported: usize = 0;
+
+    try self.exportHeartRate(writer, &stmts, &exported);
+    try self.exportGeneric(writer, &stmts, .weight_body_mass, &exported);
+    try self.exportGeneric(writer, &stmts, .walking_heart_rate_average, &exported);
+    try self.exportGeneric(writer, &stmts, .resting_heart_rate, &exported);
+    try self.exportGeneric(writer, &stmts, .walking_running_distance, &exported);
+    try self.exportGeneric(writer, &stmts, .walking_speed, &exported);
+    try self.exportSleepAnalysis(writer, &stmts, &exported);
+
+    logger.info("exported {d} data points in {d}ms", .{ exported, time.milliTimestamp() - start });
 }
 
 // TODO(vincent): merge both functions ? they're quite similar.
 
-fn exportHeartRate(self: *Self, writer: net.Stream.Writer, stmts: *Statements) !void {
+fn exportHeartRate(self: *Self, writer: net.Stream.Writer, stmts: *Statements, exported: *usize) !void {
     // Store the data point ids to mark as exported next.
     var ids = try std.ArrayList(usize).initCapacity(self.allocator, 64);
     defer ids.deinit();
@@ -110,6 +111,8 @@ fn exportHeartRate(self: *Self, writer: net.Stream.Writer, stmts: *Statements) !
     }
     logger.debug("exported {d} heart_rate data points", .{ids.items.len});
 
+    exported.* += ids.items.len;
+
     // Mark the data point as exported
 
     var global_savepoint = try self.db.savepoint("global");
@@ -125,7 +128,7 @@ fn exportHeartRate(self: *Self, writer: net.Stream.Writer, stmts: *Statements) !
     global_savepoint.commit();
 }
 
-fn exportGeneric(self: *Self, writer: net.Stream.Writer, stmts: *Statements, comptime metric_name: @Type(.EnumLiteral)) !void {
+fn exportGeneric(self: *Self, writer: net.Stream.Writer, stmts: *Statements, comptime metric_name: @Type(.EnumLiteral), exported: *usize) !void {
     // Store the data point ids to mark as exported next.
     var ids = try std.ArrayList(usize).initCapacity(self.allocator, 64);
     defer ids.deinit();
@@ -152,6 +155,8 @@ fn exportGeneric(self: *Self, writer: net.Stream.Writer, stmts: *Statements, com
     }
     logger.debug("exported {d} " ++ @tagName(metric_name) ++ " data point", .{ids.items.len});
 
+    exported.* += ids.items.len;
+
     // Mark the data point as exported
 
     var global_savepoint = try self.db.savepoint("global");
@@ -167,7 +172,7 @@ fn exportGeneric(self: *Self, writer: net.Stream.Writer, stmts: *Statements, com
     global_savepoint.commit();
 }
 
-fn exportSleepAnalysis(self: *Self, writer: net.Stream.Writer, stmts: *Statements) !void {
+fn exportSleepAnalysis(self: *Self, writer: net.Stream.Writer, stmts: *Statements, exported: *usize) !void {
     // Store the data point ids to mark as exported next.
     var ids = try std.ArrayList(usize).initCapacity(self.allocator, 64);
     defer ids.deinit();
@@ -196,6 +201,8 @@ fn exportSleepAnalysis(self: *Self, writer: net.Stream.Writer, stmts: *Statement
         try ids.append(row.id);
     }
     logger.debug("exported {d} sleep_analysis data points", .{ids.items.len});
+
+    exported.* += ids.items.len;
 
     // Mark the data point as exported
 
