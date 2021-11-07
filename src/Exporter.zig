@@ -295,8 +295,10 @@ const Statements = struct {
 
     fn deinit(self: *Statements) void {
         self.get_heart_rate_data_point.deinit();
+        self.get_sleep_analysis_data_point.deinit();
         self.get_generic_data_point.deinit();
         self.mark_heart_rate_as_exported.deinit();
+        self.mark_sleep_analysis_as_exported.deinit();
         self.mark_generic_as_exported.deinit();
     }
 };
