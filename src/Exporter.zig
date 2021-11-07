@@ -51,13 +51,14 @@ fn doExport(self: *Self) !void {
     logger.debug("exporting data", .{});
 
     // Try to connect to Victoria
-    self.stream = net.tcpConnectToAddress(self.addr) catch |err| {
-        logger.err("unable to connect to victoria at {s}, err: {s}", .{ self.addr, err });
-        return;
-    };
+    if (self.stream == null) {
+        self.stream = net.tcpConnectToAddress(self.addr) catch |err| {
+            logger.err("unable to connect to victoria at {s}, err: {s}", .{ self.addr, err });
+            return;
+        };
+    }
 
     // Prepare the statements
-
     var diags = sqlite.Diagnostics{};
     var stmts = Statements.prepare(self.db, &diags) catch |err| {
         logger.err("unable to prepare statements, err: {s}, diagnostics: {s}", .{ err, diags });
