@@ -75,7 +75,7 @@ const schema: []const []const u8 = &[_][]const u8{
     \\ );
 };
 
-fn getDb(allocator: *mem.Allocator, nullable_path: ?[:0]const u8) !sqlite.Db {
+fn getDb(allocator: mem.Allocator, nullable_path: ?[:0]const u8) !sqlite.Db {
     _ = allocator;
 
     const db_mode = if (nullable_path) |path|
@@ -102,7 +102,7 @@ pub fn main() anyerror!void {
     defer if (gpa.deinit()) {
         std.debug.panic("leak detected", .{});
     };
-    const allocator = &gpa.allocator;
+    const allocator = gpa.allocator();
 
     //
 
