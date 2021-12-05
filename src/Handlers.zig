@@ -33,7 +33,7 @@ pub fn handleMetrics(context: *Context, response: *http.Response, request: http.
     var arena = heap.ArenaAllocator.init(context.root_allocator);
     defer arena.deinit();
 
-    try context.registry.write(&arena.allocator, response.writer());
+    try context.registry.write(arena.allocator(), response.writer());
 }
 
 pub fn handleHealthData(context: *Context, response: *http.Response, request: http.Request) !void {
@@ -44,7 +44,7 @@ pub fn handleHealthData(context: *Context, response: *http.Response, request: ht
 
     var arena = heap.ArenaAllocator.init(context.root_allocator);
     defer arena.deinit();
-    const allocator = &arena.allocator;
+    const allocator = arena.allocator();
 
     // Always close the connection
     response.close = true;
