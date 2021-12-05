@@ -76,7 +76,7 @@ const FixDateError = error{
     InvalidTimezoneOffset,
 };
 
-fn fixDate(allocator: *mem.Allocator, date: []const u8) FixDateError![]const u8 {
+fn fixDate(allocator: mem.Allocator, date: []const u8) FixDateError![]const u8 {
     if (mem.count(u8, date, " ") < 2) return date;
 
     // Expect a space here since count said there was at least 2.
@@ -101,7 +101,7 @@ const ParseHeartRateError = error{
     InvalidMetricDataPointBody,
 } || GetAsStringError || GetAsFloatError || FixDateError || fmt.ParseFloatError;
 
-fn parseHeartRateDataPoint(allocator: *mem.Allocator, value: json.Value) ParseHeartRateError!MetricDataPoint {
+fn parseHeartRateDataPoint(allocator: mem.Allocator, value: json.Value) ParseHeartRateError!MetricDataPoint {
     switch (value) {
         .Object => |obj| {
             const data_point = .{
@@ -120,7 +120,7 @@ const ParseSleepAnalysisError = error{
     InvalidMetricDataPointBody,
 } || GetAsStringError || GetAsFloatError || FixDateError;
 
-fn parseSleepAnalysisDataPoint(allocator: *mem.Allocator, value: json.Value) ParseSleepAnalysisError!MetricDataPoint {
+fn parseSleepAnalysisDataPoint(allocator: mem.Allocator, value: json.Value) ParseSleepAnalysisError!MetricDataPoint {
     _ = allocator;
     switch (value) {
         .Object => |obj| {
@@ -145,7 +145,7 @@ const ParseHeadphoneAudioExposureError = error{
     InvalidMetricBody,
 } || GetAsStringError || GetAsFloatError || FixDateError || fmt.ParseFloatError;
 
-fn parseGenericDataPoint(allocator: *mem.Allocator, value: json.Value) ParseHeadphoneAudioExposureError!MetricDataPoint {
+fn parseGenericDataPoint(allocator: mem.Allocator, value: json.Value) ParseHeadphoneAudioExposureError!MetricDataPoint {
     _ = allocator;
     switch (value) {
         .Object => |obj| {
@@ -159,7 +159,7 @@ fn parseGenericDataPoint(allocator: *mem.Allocator, value: json.Value) ParseHead
     }
 }
 
-fn parseMetric(allocator: *mem.Allocator, value: json.Value) !Metric {
+fn parseMetric(allocator: mem.Allocator, value: json.Value) !Metric {
     switch (value) {
         .Object => |obj| {
             var metric = Metric{
@@ -204,7 +204,7 @@ data: struct {
 parser: json.Parser,
 tree: json.ValueTree,
 
-pub fn parse(allocator: *mem.Allocator, body: []const u8) !Self {
+pub fn parse(allocator: mem.Allocator, body: []const u8) !Self {
     var parser = json.Parser.init(allocator, false);
     var res = Self{
         .parser = parser,

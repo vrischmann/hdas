@@ -17,7 +17,7 @@ const RegistryType = @import("main.zig").RegistryType;
 const logger = std.log.scoped(.handlers);
 
 pub const Context = struct {
-    root_allocator: *mem.Allocator,
+    root_allocator: mem.Allocator,
 
     db: *sqlite.Db,
     registry: *RegistryType,
