@@ -253,7 +253,7 @@ test "parse" {
 
     var arena = heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
-    const allocator = &arena.allocator;
+    const allocator = arena.allocator();
 
     const health_data = try parse(allocator, test_data);
 
