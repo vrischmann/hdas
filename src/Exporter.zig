@@ -43,7 +43,6 @@ pub fn run(self: *Self) void {
     while (true) {
         self.doExport() catch |err| {
             logger.err("unable to do export (err={}), will retry", .{err});
-            continue;
         };
         time.sleep(10 * time.ns_per_s);
     }
