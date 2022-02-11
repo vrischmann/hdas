@@ -161,6 +161,7 @@ pub fn main() anyerror!void {
             .dump_request = options.options.@"debug-dump-request",
         },
     };
+    const router_builder = http.router.Builder(*Handlers.Context);
 
     logger.info("listening on {s}:{d}", .{ options.options.@"listen-addr", options.options.@"listen-port" });
     if (context.debug.dump_request) {
@@ -172,8 +173,8 @@ pub fn main() anyerror!void {
         try net.Address.parseIp(options.options.@"listen-addr", options.options.@"listen-port"),
         &context,
         comptime http.router.Router(*Handlers.Context, &.{
-            http.router.post("/health_data", Handlers.handleHealthData),
-            http.router.get("/metrics", Handlers.handleMetrics),
+            router_builder.post("/health_data", null, Handlers.handleHealthData),
+            router_builder.get("/metrics", null, Handlers.handleMetrics),
         }),
     );
 }

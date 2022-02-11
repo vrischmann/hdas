@@ -27,16 +27,14 @@ pub const Context = struct {
     } = .{},
 };
 
-pub fn handleMetrics(context: *Context, response: *http.Response, request: http.Request) !void {
-    _ = request;
-
+pub fn handleMetrics(context: *Context, response: *http.Response, _: http.Request, _: ?*const anyopaque) !void {
     var arena = heap.ArenaAllocator.init(context.root_allocator);
     defer arena.deinit();
 
     try context.registry.write(arena.allocator(), response.writer());
 }
 
-pub fn handleHealthData(context: *Context, response: *http.Response, request: http.Request) !void {
+pub fn handleHealthData(context: *Context, response: *http.Response, request: http.Request, _: ?*const anyopaque) !void {
     const startHandling = time.milliTimestamp();
     defer {
         logger.info("handled request in {d}ms", .{time.milliTimestamp() - startHandling});
