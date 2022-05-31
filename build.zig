@@ -2,19 +2,19 @@ const std = @import("std");
 
 const package_sqlite = std.build.Pkg{
     .name = "sqlite",
-    .path = .{ .path = "third_party/zig-sqlite/sqlite.zig" },
+    .source = .{ .path = "third_party/zig-sqlite/sqlite.zig" },
 };
 const package_args = std.build.Pkg{
     .name = "args",
-    .path = .{ .path = "third_party/zig-args/args.zig" },
+    .source = .{ .path = "third_party/zig-args/args.zig" },
 };
 const package_prometheus = std.build.Pkg{
     .name = "prometheus",
-    .path = .{ .path = "third_party/zig-prometheus/src/main.zig" },
+    .source = .{ .path = "third_party/zig-prometheus/src/main.zig" },
 };
 const package_apple_pie = std.build.Pkg{
     .name = "apple_pie",
-    .path = .{ .path = "third_party/apple_pie/src/apple_pie.zig" },
+    .source = .{ .path = "third_party/apple_pie/src/apple_pie.zig" },
 };
 
 const packages = &[_]std.build.Pkg{
