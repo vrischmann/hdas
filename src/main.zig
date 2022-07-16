@@ -45,6 +45,8 @@ const schema: []const []const u8 = &[_][]const u8{
     \\   FOREIGN KEY (metric_id) REFERENCES metric(id)
     \\ );
     ,
+    \\CREATE INDEX IF NOT EXISTS data_point_generic_exported_idx ON data_point_generic(exported);
+    ,
     \\ CREATE TABLE IF NOT EXISTS data_point_heart_rate(
     \\   id integer PRIMARY KEY,
     \\   metric_id integer NOT NULL,
@@ -56,6 +58,8 @@ const schema: []const []const u8 = &[_][]const u8{
     \\   UNIQUE (id, metric_id, date),
     \\   FOREIGN KEY (metric_id) REFERENCES metric(id)
     \\ );
+    ,
+    \\CREATE INDEX IF NOT EXISTS data_point_heart_rate_exported_idx ON data_point_heart_rate(exported);
     ,
     \\ CREATE TABLE IF NOT EXISTS data_point_sleep_analysis(
     \\   id integer PRIMARY KEY,
@@ -73,6 +77,8 @@ const schema: []const []const u8 = &[_][]const u8{
     \\   UNIQUE (id, metric_id, date),
     \\   FOREIGN KEY (metric_id) REFERENCES metric(id)
     \\ );
+    ,
+    \\CREATE INDEX IF NOT EXISTS data_point_sleep_analysis_exported_idx ON data_point_sleep_analysis(exported);
 };
 
 fn getDb(allocator: mem.Allocator, nullable_path: ?[:0]const u8) !sqlite.Db {
