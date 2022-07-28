@@ -65,7 +65,7 @@ fn getAsFloat(nullable_value: ?json.Value) GetAsFloatError!f64 {
         .Float => |f| return f,
         .Integer => |n| return @intToFloat(f64, n),
         else => {
-            logger.warn("value {s} is not a float", .{value});
+            logger.warn("value {?} is not a float", .{value});
             return error.NotAFloat;
         },
     }

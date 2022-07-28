@@ -4,6 +4,6 @@ const json = std.json;
 const mem = std.mem;
 const testing = std.testing;
 
-test "" {
+test {
     _ = @import("HealthData.zig");
 }
