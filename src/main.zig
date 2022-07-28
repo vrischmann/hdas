@@ -98,7 +98,7 @@ fn getDb(allocator: mem.Allocator, nullable_path: ?[:0]const u8) !sqlite.Db {
         },
         .diags = &diags,
     }) catch |err| {
-        logger.err("unable to open database, err: {s}, diagnostics: {s}", .{ err, diags });
+        logger.err("unable to open database, err: {!}, diagnostics: {s}", .{ err, diags });
         return err;
     };
 }
@@ -135,7 +135,7 @@ pub fn main() anyerror!void {
     inline for (schema) |ddl| {
         var diags = sqlite.Diagnostics{};
         db.exec(ddl, .{ .diags = &diags }, .{}) catch |err| {
-            logger.err("unable to executing statement, err: {s}, message: {s}", .{ err, diags });
+            logger.err("unable to executing statement, err: {!}, message: {s}", .{ err, diags });
             return err;
         };
     }

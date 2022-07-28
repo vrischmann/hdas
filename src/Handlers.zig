@@ -73,7 +73,7 @@ pub fn handleHealthData(context: *Context, response: *http.Response, request: ht
             return;
         },
         else => {
-            logger.err("unable to parse body {s}, err: {s}", .{
+            logger.err("unable to parse body {s}, err: {!}", .{
                 fmt.fmtSliceEscapeLower(raw_body),
                 err,
             });
@@ -86,7 +86,7 @@ pub fn handleHealthData(context: *Context, response: *http.Response, request: ht
 
     var diags = sqlite.Diagnostics{};
     var stmts = Statements.prepare(context.db, &diags) catch |err| {
-        logger.err("unable to prepare statements, err: {s}, diagnostics: {s}", .{ err, diags });
+        logger.err("unable to prepare statements, err: {!}, diagnostics: {s}", .{ err, diags });
         return err;
     };
     defer stmts.deinit();

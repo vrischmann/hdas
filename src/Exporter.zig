@@ -42,7 +42,7 @@ pub fn deinit(self: *Self) void {
 pub fn run(self: *Self) void {
     while (true) {
         self.doExport() catch |err| {
-            logger.err("unable to do export (err={}), will retry", .{err});
+            logger.err("unable to do export (err={!}), will retry", .{err});
         };
         time.sleep(10 * time.ns_per_s);
     }
@@ -55,7 +55,7 @@ fn doExport(self: *Self) !void {
     // Try to connect to Victoria
     if (self.stream == null) {
         self.stream = net.tcpConnectToAddress(self.addr) catch |err| {
-            logger.err("unable to connect to victoria at {s}, err: {s}", .{ self.addr, err });
+            logger.err("unable to connect to victoria at {s}, err: {!}", .{ self.addr, err });
             return;
         };
     }
@@ -63,7 +63,7 @@ fn doExport(self: *Self) !void {
     // Prepare the statements
     var diags = sqlite.Diagnostics{};
     var stmts = Statements.prepare(self.db, &diags) catch |err| {
-        logger.err("unable to prepare statements, err: {s}, diagnostics: {s}", .{ err, diags });
+        logger.err("unable to prepare statements, err: {!}, diagnostics: {s}", .{ err, diags });
         return err;
     };
     defer stmts.deinit();
