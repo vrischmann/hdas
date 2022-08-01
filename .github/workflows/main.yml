@@ -7,36 +7,36 @@ on:
     - cron: "0 13 * * *"
   workflow_dispatch:
 
-jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: goto-bus-stop/setup-zig@v1
-        with:
-          version: master
-      - run: zig fmt --check *.zig src/*.zig
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
-  build:
+jobs:
+  test:
     strategy:
       matrix:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
-        with:
-          submodules: true
-      - uses: goto-bus-stop/setup-zig@v1
-        with:
-          version: master
 
-      - name: Cache zig-cache
-        uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: |
-            zig-cache
-            ~/.cache/zig
-          key: ${{ runner.os }}-build-zig
+            ~/.cargo
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Install sqlx
+        run: cargo install sqlx-cli --no-default-features --features rustls,sqlite
+
+      - name: Setup sqlx
+        run: sqlx database setup
 
       - name: Build
-        run: zig build --verbose-cc --verbose --verbose-link
+        run: cargo build
+      - name: Test
+        run: cargo test
+      - name: Lint
+        run: cargo clippy -- --deny=warnings
