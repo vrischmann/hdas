@@ -1,5 +1,65 @@
 {
   "db": "SQLite",
+  "1436c8ef3815360eb3ac10662d79d68d0bfae170710ea5de7a6ee9c034825426": {
+    "describe": {
+      "columns": [
+        {
+          "name": "date",
+          "ordinal": 0,
+          "type_info": "Int64"
+        },
+        {
+          "name": "min",
+          "ordinal": 1,
+          "type_info": "Float"
+        },
+        {
+          "name": "max",
+          "ordinal": 2,
+          "type_info": "Float"
+        },
+        {
+          "name": "avg",
+          "ordinal": 3,
+          "type_info": "Float"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "\n            SELECT date, min, max, avg\n            FROM data_point_heart_rate WHERE metric_id = ?"
+  },
+  "2359fa38f1371944d2529153a12e1a393c2cd1720ddf978b895d420ff7974799": {
+    "describe": {
+      "columns": [
+        {
+          "name": "name",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "units",
+          "ordinal": 1,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        false,
+        false
+      ],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "SELECT name, units FROM metric WHERE id = ?"
+  },
   "38cf2cccd186164127405e70670787d41f5c3cf6231b9cc0d634c29f105e6aa1": {
     "describe": {
       "columns": [],
@@ -29,6 +89,96 @@
       }
     },
     "query": "\n                UPDATE data_point_generic\n                SET exported = 1\n                WHERE id = ?"
+  },
+  "643718d3a10fce25ed87286c8de6cda7d4bd0c67a92b72e02c3b692b2293560f": {
+    "describe": {
+      "columns": [
+        {
+          "name": "date",
+          "ordinal": 0,
+          "type_info": "Int64"
+        },
+        {
+          "name": "sleep_start",
+          "ordinal": 1,
+          "type_info": "Int64"
+        },
+        {
+          "name": "sleep_end",
+          "ordinal": 2,
+          "type_info": "Int64"
+        },
+        {
+          "name": "sleep_source",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "in_bed_start",
+          "ordinal": 4,
+          "type_info": "Int64"
+        },
+        {
+          "name": "in_bed_end",
+          "ordinal": 5,
+          "type_info": "Int64"
+        },
+        {
+          "name": "in_bed_source",
+          "ordinal": 6,
+          "type_info": "Text"
+        },
+        {
+          "name": "in_bed",
+          "ordinal": 7,
+          "type_info": "Float"
+        },
+        {
+          "name": "asleep",
+          "ordinal": 8,
+          "type_info": "Float"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "\n            SELECT\n              date, sleep_start, sleep_end, sleep_source,\n              in_bed_start, in_bed_end, in_bed_source,\n              in_bed, asleep\n            FROM data_point_sleep_analysis WHERE metric_id = ?"
+  },
+  "84d03c577a8fa1b56cfaecff1800ab50f3092798e08dd94ce4b5d67129ff7222": {
+    "describe": {
+      "columns": [
+        {
+          "name": "date",
+          "ordinal": 0,
+          "type_info": "Int64"
+        },
+        {
+          "name": "quantity",
+          "ordinal": 1,
+          "type_info": "Float"
+        }
+      ],
+      "nullable": [
+        false,
+        false
+      ],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "SELECT date, quantity FROM data_point_generic WHERE metric_id = ?"
   },
   "8bd4c567bc2c26f690f829ec5ec1f7253c5a8678af58f7c61b8b742988b70507": {
     "describe": {
