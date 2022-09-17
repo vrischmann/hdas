@@ -1,3 +1,9 @@
 /.zigmod
 /deps.zig
 /testdata/test_data.json
+/data.db*
+/data-test.db*
+
+# Added by cargo
+
+/target
