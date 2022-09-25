@@ -1,4 +1,3 @@
-
 use axum::handler::Handler;
 use core::future::Future;
 
@@ -7,7 +6,6 @@ use shutdown::Shutdown;
 use std::net;
 use std::str::FromStr;
 use std::sync::Arc;
-
 
 mod db;
 mod exporter;
