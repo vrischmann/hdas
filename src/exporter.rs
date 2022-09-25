@@ -82,9 +82,8 @@ impl Exporter {
             }
         }
 
-        match self.stream {
-            Some(stream) => drop(stream),
-            None => {}
+        if let Some(stream) = self.stream {
+            drop(stream);
         }
 
         Ok(())
