@@ -24,9 +24,15 @@ jobs:
         with:
           path: |
             ~/.cargo
+            vendor/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Vendorize
+        run: |
+          mkdir -p .cargo
+          cargo vendor > .cargo/config.toml
 
       - name: Install sqlx
         run: cargo install sqlx-cli --no-default-features --features rustls,sqlite
@@ -35,8 +41,8 @@ jobs:
         run: sqlx database setup
 
       - name: Build
-        run: cargo build
+        run: cargo build --offline
       - name: Test
-        run: cargo test
+        run: cargo test --offline
       - name: Lint
         run: cargo clippy -- --deny=warnings
