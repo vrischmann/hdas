@@ -166,7 +166,7 @@ fn main() {
                 .help("database path")
                 .takes_value(true)
                 .default_value("data.db")
-                .value_name("pATH"),
+                .value_name("PATH"),
         );
 
     let matches = root_command.get_matches();
