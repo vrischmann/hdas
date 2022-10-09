@@ -1,4 +1,5 @@
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
+use sqlx::ConnectOptions;
 use std::fmt;
 use std::str::FromStr;
 
@@ -8,9 +9,11 @@ pub struct Db {
 
 impl Db {
     pub async fn from_path(path: &str) -> Result<Self> {
-        let options = SqliteConnectOptions::from_str(path)?
+        let mut options = SqliteConnectOptions::from_str(path)?
             .create_if_missing(true)
             .pragma("foreign_keys", "on");
+        options.log_statements(log::LevelFilter::Debug);
+
         let pool = SqlitePoolOptions::new().connect_with(options).await?;
 
         sqlx::migrate!("./migrations").run(&pool).await?;
