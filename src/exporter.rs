@@ -1,6 +1,5 @@
 use crate::db;
 use crate::shutdown::Shutdown;
-use log::{debug, error, info};
 use std::fmt;
 use std::fmt::Write;
 use std::io;
@@ -9,6 +8,7 @@ use std::sync::Arc;
 use std::time;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
+use tracing::{debug, error, info};
 
 #[derive(Debug)]
 pub enum Error {
@@ -76,7 +76,7 @@ impl Exporter {
                 _ = interval.tick() => {
                     match self.do_export().await {
                         Ok(_) => {},
-                        Err(err) => error!("unable to export data, err: {}", err),
+                        Err(err) => error!(%err, "unable to export data"),
                     }
                 },
             }
@@ -93,7 +93,7 @@ impl Exporter {
         match self.stream {
             Some(ref mut s) => Ok(s),
             None => {
-                debug!("connecting to {}", self.addr);
+                debug!(addr = self.addr.to_string(), "connecting to VM");
 
                 let stream = TcpStream::connect(self.addr).await?;
                 self.stream = Some(stream);
@@ -124,7 +124,7 @@ impl Exporter {
         stream.write_all(commands_buffer.as_bytes()).await?;
 
         if exported > 0 {
-            info!("exported {} data points", exported);
+            info!(exported = exported, "exported data points");
         }
 
         Ok(())

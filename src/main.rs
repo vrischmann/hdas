@@ -1,10 +1,10 @@
 use core::future::Future;
 
-use log::{debug, error, info};
 use shutdown::Shutdown;
 use std::net;
 use std::str::FromStr;
 use std::sync::Arc;
+use tracing::{debug, error, info};
 
 mod db;
 mod exporter;
@@ -88,7 +88,7 @@ fn serve(args: &clap::ArgMatches) -> anyhow::Result<()> {
         .get_one::<String>("listen-addr")
         .map(|addr| std::net::SocketAddr::from_str(addr).expect("expected a valid listen address"))
         .unwrap(); // Safe because clap enforces we get a value
-    info!("listen addr: {}", listen_addr);
+    info!(listen_addr = listen_addr.to_string(), "got listen addr");
 
     let victoria_addr = args
         .get_one::<String>("victoria-addr")
@@ -96,7 +96,10 @@ fn serve(args: &clap::ArgMatches) -> anyhow::Result<()> {
             std::net::SocketAddr::from_str(addr).expect("expected a valid VictoriaMetrics address")
         })
         .unwrap(); // Safe because clap enforces we get a value
-    info!("victoria addr: {}", victoria_addr);
+    info!(
+        victoria_addr = victoria_addr.to_string(),
+        "got victoria addr"
+    );
 
     // Build the Tokio runtime
 
@@ -175,12 +178,12 @@ fn main() {
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info,hdas=debug");
     }
-    pretty_env_logger::init();
+    tracing_subscriber::fmt::init();
 
     // Run the appropriate command
 
     match serve(&matches) {
         Ok(()) => {}
-        Err(err) => error!("unable to serve, got err {}", err),
+        Err(err) => error!(%err, "unable to serve, got err"),
     }
 }
