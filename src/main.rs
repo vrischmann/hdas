@@ -173,7 +173,7 @@ fn main() {
 
     // Initialize logger
     if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "hdas=debug");
+        std::env::set_var("RUST_LOG", "info,hdas=debug");
     }
     pretty_env_logger::init();
 
