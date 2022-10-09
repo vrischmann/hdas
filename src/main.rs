@@ -1,4 +1,3 @@
-use axum::handler::Handler;
 use core::future::Future;
 
 use log::{debug, error, info};
@@ -40,12 +39,11 @@ impl App {
         let state = web::State::new(db);
 
         // Build the router
-        let web_app = axum::Router::new()
+        let web_app = axum::Router::with_state(state)
             .route("/health_data", axum::routing::post(web::health_data))
             .route("/metrics", axum::routing::get(web::metrics))
-            .fallback(fallback_handler.into_service())
-            .layer(tower_http::trace::TraceLayer::new_for_http())
-            .layer(axum::Extension(Arc::new(state)));
+            .fallback(fallback_handler)
+            .layer(tower_http::trace::TraceLayer::new_for_http());
 
         let web_server = axum::Server::bind(&listen_addr)
             .serve(web_app.into_make_service())
