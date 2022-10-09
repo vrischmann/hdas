@@ -1,12 +1,12 @@
 use crate::db;
 use crate::health_data;
-use axum::Extension;
 use health_data::{Metric, MetricDataPoint};
 use log::{error, info};
 use prometheus::Encoder;
 
 use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct State {
     db: Arc<db::Db>,
 }
@@ -54,7 +54,7 @@ impl From<sqlx::Error> for HealthDataHandleError {
 }
 
 pub async fn health_data(
-    Extension(state): Extension<Arc<State>>,
+    axum::extract::State(state): axum::extract::State<State>,
     body: axum::body::Bytes,
 ) -> Result<(http::StatusCode, String), HealthDataHandleError> {
     let db = &state.db;
