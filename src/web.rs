@@ -1,8 +1,8 @@
 use crate::db;
 use crate::health_data;
 use health_data::{Metric, MetricDataPoint};
-use log::{error, info};
 use prometheus::Encoder;
+use tracing::{error, info};
 
 use std::sync::Arc;
 
@@ -25,13 +25,12 @@ pub enum HealthDataHandleError {
 
 impl axum::response::IntoResponse for HealthDataHandleError {
     fn into_response(self) -> axum::response::Response {
-        let body = match self {
-            Self::Http(code) => code.to_string(),
-            Self::Json(err) => err.to_string(),
-            Self::SQLx(err) => err.to_string(),
+        let result = match self {
+            Self::Http(code) => (code, code.to_string()),
+            Self::Json(err) => (http::StatusCode::INTERNAL_SERVER_ERROR, err.to_string()),
+            Self::SQLx(err) => (http::StatusCode::INTERNAL_SERVER_ERROR, err.to_string()),
         };
-
-        (http::StatusCode::INTERNAL_SERVER_ERROR, body).into_response()
+        result.into_response()
     }
 }
 
@@ -64,7 +63,7 @@ pub async fn health_data(
     let body_string = match String::from_utf8(body.to_vec()) {
         Ok(body) => body,
         Err(err) => {
-            error!("unable to convert body to a UTF-8 string, err: {}", err);
+            error!(%err, "unable to convert body to a UTF-8 string");
             return Err(http::StatusCode::BAD_REQUEST.into());
         }
     };
@@ -80,10 +79,10 @@ pub async fn health_data(
 
         if !metric.data.is_empty() {
             info!(
-                "got {} data points for metric {} (units {})",
-                metric.data.len(),
-                metric.name,
-                metric.units,
+                metric_name = metric.name,
+                metric_datapoints = metric.data.len(),
+                metric_units = metric.units,
+                "got data points",
             );
 
             for data_point in &metric.data {
