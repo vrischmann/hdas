@@ -46,18 +46,20 @@ jobs:
       - name: Setup sqlx
         run: sqlx database setup
 
+      - name: Build and test
+        env:
+          RUSTFLAGS: "-Cinstrument-coverage"
+          LLVM_PROFILE_FILE: "your_name-%p-%m.profraw"
+        run: |
+          cargo build
+          cargo test
+
       - name: Lint
         env:
           RUSTFLAGS: "-Cinstrument-coverage"
         run: |
           cargo clippy -- --deny=warnings
           cargo fmt -- --check
-
-      - name: Test
-        env:
-          RUSTFLAGS: "-Cinstrument-coverage"
-          LLVM_PROFILE_FILE: "your_name-%p-%m.profraw"
-        run: cargo test
 
       - name: Generate the code coverage with grcov
         run: |
