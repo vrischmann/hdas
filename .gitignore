@@ -3,6 +3,7 @@
 /testdata/test_data.json
 /data.db*
 /data-test.db*
+/*.profraw
 
 # Added by cargo
 
