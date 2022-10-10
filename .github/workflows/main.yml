@@ -47,6 +47,8 @@ jobs:
         run: sqlx database setup
 
       - name: Lint
+        env:
+          RUSTFLAGS: "-Cinstrument-coverage"
         run: |
           cargo clippy -- --deny=warnings
           cargo fmt -- --check
