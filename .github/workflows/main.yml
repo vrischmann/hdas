@@ -38,5 +38,8 @@ jobs:
         run: cargo build
       - name: Test
         run: cargo test
+
       - name: Lint
         run: cargo clippy -- --deny=warnings
+      - name: Formatting check
+        run: cargo fmt -- --check
