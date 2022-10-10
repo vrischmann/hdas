@@ -16,4 +16,3 @@ impl Shutdown {
         let _ = self.shutdown_recv.recv().await;
     }
 }
-
