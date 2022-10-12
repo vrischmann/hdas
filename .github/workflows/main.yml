@@ -12,34 +12,69 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  ci:
     strategy:
       matrix:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
+      # Needed for coverage
+      - run: rustup component add llvm-tools-preview
+
       - uses: actions/checkout@v2
+
+      # Caching
 
       - uses: actions/cache@v3
         with:
           path: |
-            ~/.cargo
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Install sqlx
-        run: cargo install sqlx-cli --no-default-features --features rustls,sqlite
+      #
+
+      - name: Install tools
+        run: |
+          cargo install sqlx-cli --no-default-features --features rustls,sqlite || true
+          cargo install grcov || true
 
       - name: Setup sqlx
         run: sqlx database setup
 
-      - name: Build
-        run: cargo build
-      - name: Test
-        run: cargo test
+      - name: Build and test
+        env:
+          RUSTFLAGS: "-Cinstrument-coverage"
+          LLVM_PROFILE_FILE: "your_name-%p-%m.profraw"
+        run: |
+          cargo build
+          cargo test
 
       - name: Lint
-        run: cargo clippy -- --deny=warnings
-      - name: Formatting check
-        run: cargo fmt -- --check
+        env:
+          RUSTFLAGS: "-Cinstrument-coverage"
+        run: |
+          cargo clippy -- --deny=warnings
+          cargo fmt -- --check
+
+      - name: Generate the code coverage with grcov
+        run: |
+          grcov . -s . --binary-path ./target/debug/ -t html --branch --ignore-not-existing -o ./target/debug/coverage/
+
+      - name: Generate the code coverage summary
+        run: |
+          _message=$(cat target/debug/coverage/coverage.json | jq '.message' -r)
+          _color=$(cat target/debug/coverage/coverage.json | jq '.color' -r)
+
+          _mark=""
+          if [[ $_color == "red" ]]; then
+            _mark=":heavy_exclamation_mark:"
+          elif [[ $_color == "green" ]]; then
+            _mark=":heavy_check_mark:"
+          fi
+
+          echo "Test coverage: $_mark $_message for commit $GITHUB_SHA" >> $GITHUB_STEP_SUMMARY
