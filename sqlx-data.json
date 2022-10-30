@@ -80,6 +80,16 @@
     },
     "query": "\n                UPDATE data_point_sleep_analysis\n                SET exported = 1\n                WHERE id = ?"
   },
+  "51068e8599d06632275db16acba47be27cb81ae466e09695bfb41252816aa9e5": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 0
+      }
+    },
+    "query": "DELETE FROM data_point_generic WHERE exported = 1"
+  },
   "6207761364cc41811742b136b45c98e35aaa778892e0c532af5207d93a298656": {
     "describe": {
       "columns": [],
@@ -240,6 +250,16 @@
     },
     "query": "\n                INSERT INTO data_point_heart_rate(metric_id, date, min, max, avg)\n                VALUES(?, ?, ?, ?, ?)\n                ON CONFLICT DO NOTHING"
   },
+  "b778ab3ecc4c1199fcb4053aeb4d7fb9fb576d57037d1f01549280474d7415ab": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 0
+      }
+    },
+    "query": "DELETE FROM data_point_heart_rate WHERE exported = 1"
+  },
   "dc2095e165d3abfeaa83d5166697100caade7d863c461d1ce5c9b86a3f21519f": {
     "describe": {
       "columns": [
@@ -323,5 +343,15 @@
       }
     },
     "query": "\n            SELECT d.id, d.quantity, d.date\n            FROM data_point_generic d\n            INNER JOIN metric m ON d.metric_id = m.id\n            WHERE m.name = ?\n            AND d.exported = 0\n            "
+  },
+  "fb4267d89df1743c08e67e42a4737b96a637540b8afc30e72fdb9a39611531bc": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 0
+      }
+    },
+    "query": "DELETE FROM data_point_sleep_analysis WHERE exported = 1"
   }
 }

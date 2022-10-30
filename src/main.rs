@@ -6,6 +6,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use tracing::{debug, error, info};
 
+mod cleaner;
 mod db;
 mod exporter;
 mod health_data;
@@ -64,6 +65,11 @@ impl App {
         let exporter_shutdown = Shutdown::new(notify_shutdown_sender.subscribe());
         let exporter = tokio::task::spawn(exporter.run(exporter_shutdown));
 
+        // Start the cleaner
+        let cleaner = cleaner::Cleaner::new(db.clone());
+        let cleaner_shutdown = Shutdown::new(notify_shutdown_sender.subscribe());
+        let cleaner = tokio::task::spawn(cleaner.run(cleaner_shutdown));
+
         // Start the web app and web server
         let web_server_shutdown = Shutdown::new(notify_shutdown_sender.subscribe());
         let web_server = Self::run_web_app(db.clone(), self.listen_addr, web_server_shutdown);
@@ -76,6 +82,7 @@ impl App {
 
         web_server.await?;
         exporter.await??;
+        cleaner.await??;
 
         Ok(())
     }
