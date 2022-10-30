@@ -55,18 +55,18 @@ impl Cleaner {
     }
 
     pub async fn run(mut self, mut shutdown: Shutdown) -> Result<()> {
-        let mut interval = tokio::time::interval(time::Duration::from_secs(3));
+        let mut interval = tokio::time::interval(time::Duration::from_secs(600));
 
         'outer_loop: loop {
             tokio::select! {
                 _ = shutdown.recv() => {
-                    info!("exporter shutting down");
+                    info!("cleaner shutting down");
                     break 'outer_loop;
                 },
                 _ = interval.tick() => {
                     match self.do_clean().await {
                         Ok(_) => {},
-                        Err(err) => error!(%err, "unable to export data"),
+                        Err(err) => error!(%err, "unable to clean data"),
                     }
                 },
             }
