@@ -1,5 +1,4 @@
 use core::future::Future;
-
 use shutdown::Shutdown;
 use std::net;
 use std::str::FromStr;
@@ -40,11 +39,12 @@ impl App {
         let state = web::State::new(db);
 
         // Build the router
-        let web_app = axum::Router::with_state(state)
+        let web_app = axum::Router::new()
             .route("/health_data", axum::routing::post(web::health_data))
             .route("/metrics", axum::routing::get(web::metrics))
             .fallback(fallback_handler)
-            .layer(tower_http::trace::TraceLayer::new_for_http());
+            .layer(tower_http::trace::TraceLayer::new_for_http())
+            .with_state(state);
 
         let web_server = axum::Server::bind(&listen_addr)
             .serve(web_app.into_make_service())
