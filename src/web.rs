@@ -245,6 +245,12 @@ mod tests {
         metric_id
     }
 
+    fn now() -> time::OffsetDateTime {
+        time::OffsetDateTime::now_utc()
+            .replace_microsecond(0)
+            .unwrap()
+    }
+
     #[tokio::test]
     async fn test_insert_metric() {
         let db = get_db().await;
@@ -267,7 +273,7 @@ mod tests {
         let metric_id = insert_test_metric(&mut tx).await;
 
         let generic_data_point = GenericDataPoint {
-            date: time::OffsetDateTime::now_utc(),
+            date: now(),
             quantity: 234.0,
         };
 
@@ -299,7 +305,7 @@ mod tests {
         let metric_id = insert_test_metric(&mut tx).await;
 
         let data_point = HeartRateDataPoint {
-            date: time::OffsetDateTime::now_utc(),
+            date: now(),
             min: 2.0,
             max: 50.0,
             avg: 25.0,
@@ -337,15 +343,15 @@ mod tests {
         let metric_id = insert_test_metric(&mut tx).await;
 
         let data_point = SleepAnalysisDataPoint {
-            date: time::OffsetDateTime::now_utc(),
+            date: now(),
             asleep: 34.0,
             sleep_source: "foobar".to_owned(),
-            sleep_start: time::OffsetDateTime::now_utc(),
-            sleep_end: time::OffsetDateTime::now_utc(),
+            sleep_start: now(),
+            sleep_end: now(),
             in_bed: 5012.0,
             in_bed_source: "barbaz".to_owned(),
-            in_bed_start: time::OffsetDateTime::now_utc(),
-            in_bed_end: time::OffsetDateTime::now_utc(),
+            in_bed_start: now(),
+            in_bed_end: now(),
         };
 
         insert_metric_data_point(
