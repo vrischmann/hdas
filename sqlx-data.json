@@ -296,7 +296,7 @@
     },
     "query": "\n            SELECT d.id, d.in_bed, d.asleep, d.date\n            FROM data_point_sleep_analysis d\n            INNER JOIN metric m ON d.metric_id = m.id\n            WHERE m.name = 'sleep_analysis'\n            AND d.exported = 0"
   },
-  "f2accbde796190efdf3400428f4e1a079fbebe4efd630dd5530bf0ec7b6e327f": {
+  "f5e05c7ed423180bb658698f2e64a11a1d25fa4d7b8ee42be44490bd3c24189a": {
     "describe": {
       "columns": [
         {
@@ -312,7 +312,7 @@
         "Right": 2
       }
     },
-    "query": "\n        INSERT INTO metric(name, units) VALUES(?, ?)\n        ON CONFLICT DO UPDATE SET units = excluded.units\n        RETURNING id"
+    "query": "\n        INSERT INTO metric(name, units) VALUES(?, ?)\n        ON CONFLICT (name) DO UPDATE SET units = excluded.units\n        RETURNING id"
   },
   "fae9c3d1b73fb1dc05bb886ea7c7ca814de92127b5f6886d9eb665fc32f816da": {
     "describe": {
