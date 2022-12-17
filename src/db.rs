@@ -8,8 +8,8 @@ pub struct Db {
 }
 
 impl Db {
-    pub async fn from_path(path: &str) -> Result<Self> {
-        let mut options = PgConnectOptions::from_str(path)?;
+    pub async fn build(connection_string: &str) -> Result<Self> {
+        let mut options = PgConnectOptions::from_str(connection_string)?;
         options.log_statements(log::LevelFilter::Debug);
 
         let pool = PgPoolOptions::new().connect_with(options).await?;

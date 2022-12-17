@@ -227,7 +227,9 @@ mod tests {
     use health_data::*;
 
     async fn get_db() -> db::Db {
-        db::Db::from_path("data.db").await.unwrap()
+        db::Db::build("postgres://vincent:vincent@localhost/hdas")
+            .await
+            .unwrap()
     }
 
     async fn insert_test_metric(tx: &mut db::Transaction) -> i64 {
