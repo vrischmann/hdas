@@ -140,7 +140,7 @@ async fn insert_metric(tx: &mut db::Transaction, metric: &Metric) -> Result<i64,
     let result = sqlx::query!(
         r#"
         INSERT INTO metric(name, units) VALUES(?, ?)
-        ON CONFLICT DO UPDATE SET units = excluded.units
+        ON CONFLICT (name) DO UPDATE SET units = excluded.units
         RETURNING id"#,
         metric.name,
         metric.units,
