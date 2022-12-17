@@ -139,7 +139,7 @@ pub async fn metrics() -> Result<String, MetricsError> {
 async fn insert_metric(tx: &mut db::Transaction, metric: &Metric) -> Result<i64, sqlx::Error> {
     let result = sqlx::query!(
         r#"
-        INSERT INTO metric(name, units) VALUES(?, ?)
+        INSERT INTO metric(name, units) VALUES($1, $2)
         ON CONFLICT (name) DO UPDATE SET units = excluded.units
         RETURNING id"#,
         metric.name,
@@ -163,7 +163,7 @@ async fn insert_metric_data_point(
             sqlx::query!(
                 r#"
                 INSERT INTO data_point_heart_rate(metric_id, date, min, max, avg)
-                VALUES(?, ?, ?, ?, ?)
+                VALUES($1, $2, $3, $4, $5)
                 ON CONFLICT DO NOTHING"#,
                 metric_id,
                 date_ts,
@@ -190,10 +190,10 @@ async fn insert_metric_data_point(
                   in_bed, asleep
                 )
                 VALUES(
-                  ?, ?,
-                  ?, ?, ?,
-                  ?, ?, ?,
-                  ?, ?
+                  $1, $2,
+                  $3, $4, $5,
+                  $6, $7, $8,
+                  $9, $10
                 )
                 ON CONFLICT DO NOTHING"#,
                 metric_id,
@@ -216,7 +216,7 @@ async fn insert_metric_data_point(
             sqlx::query!(
                 r#"
                 INSERT INTO data_point_generic(metric_id, date, quantity)
-                VALUES(?, ?, ?)
+                VALUES($1, $2, $3)
                 ON CONFLICT DO NOTHING"#,
                 metric_id,
                 date_ts,
@@ -260,7 +260,7 @@ mod tests {
 
         let metric_id = insert_test_metric(&mut tx).await;
 
-        let metric = sqlx::query!(r#"SELECT name, units FROM metric WHERE id = ?"#, metric_id,)
+        let metric = sqlx::query!(r#"SELECT name, units FROM metric WHERE id = $1"#, metric_id,)
             .fetch_one(&mut tx)
             .await
             .unwrap();
@@ -288,7 +288,7 @@ mod tests {
         .unwrap();
 
         let metric = sqlx::query!(
-            r#"SELECT date, quantity FROM data_point_generic WHERE metric_id = ?"#,
+            r#"SELECT date, quantity FROM data_point_generic WHERE metric_id = $1"#,
             metric_id,
         )
         .fetch_one(&mut tx)
@@ -324,7 +324,7 @@ mod tests {
         let metric = sqlx::query!(
             r#"
             SELECT date, min, max, avg
-            FROM data_point_heart_rate WHERE metric_id = ?"#,
+            FROM data_point_heart_rate WHERE metric_id = $1"#,
             metric_id,
         )
         .fetch_one(&mut tx)
@@ -370,7 +370,7 @@ mod tests {
               date, sleep_start, sleep_end, sleep_source,
               in_bed_start, in_bed_end, in_bed_source,
               in_bed, asleep
-            FROM data_point_sleep_analysis WHERE metric_id = ?"#,
+            FROM data_point_sleep_analysis WHERE metric_id = $1"#,
             metric_id,
         )
         .fetch_one(&mut tx)

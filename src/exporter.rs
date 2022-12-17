@@ -169,7 +169,7 @@ impl Exporter {
                 r#"
                 UPDATE data_point_heart_rate
                 SET exported = 1
-                WHERE id = ?"#,
+                WHERE id = $1"#,
                 id,
             )
             .execute(&mut tx)
@@ -195,7 +195,7 @@ impl Exporter {
             SELECT d.id, d.quantity, d.date
             FROM data_point_generic d
             INNER JOIN metric m ON d.metric_id = m.id
-            WHERE m.name = ?
+            WHERE m.name = $1
             AND d.exported = 0
             "#,
             metric_name,
@@ -224,7 +224,7 @@ impl Exporter {
                 r#"
                 UPDATE data_point_generic
                 SET exported = 1
-                WHERE id = ?"#,
+                WHERE id = $1"#,
                 id,
             )
             .execute(&mut tx)
@@ -279,7 +279,7 @@ impl Exporter {
                 r#"
                 UPDATE data_point_sleep_analysis
                 SET exported = 1
-                WHERE id = ?"#,
+                WHERE id = $1"#,
                 id,
             )
             .execute(&mut tx)
