@@ -13,6 +13,8 @@ concurrency:
 
 jobs:
   ci:
+    timeout-minutes: 20
+
     strategy:
       matrix:
         os: [ubuntu-latest]
