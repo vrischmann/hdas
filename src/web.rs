@@ -158,29 +158,21 @@ async fn insert_metric_data_point(
 ) -> Result<(), sqlx::Error> {
     match data_point {
         MetricDataPoint::HeartRate(data_point) => {
-            let date_ts = data_point.date.unix_timestamp();
-
             sqlx::query!(
                 r#"
                 INSERT INTO data_point_heart_rate(metric_id, date, min, max, avg)
                 VALUES($1, $2, $3, $4, $5)
                 ON CONFLICT DO NOTHING"#,
                 metric_id,
-                date_ts,
+                data_point.date,
                 data_point.min,
                 data_point.max,
-                data_point.avg
+                data_point.avg,
             )
             .execute(tx)
             .await?;
         }
         MetricDataPoint::SleepAnalysis(data_point) => {
-            let date_ts = data_point.date.unix_timestamp();
-            let sleep_start_ts = data_point.sleep_start.unix_timestamp();
-            let sleep_end_ts = data_point.sleep_end.unix_timestamp();
-            let in_bed_start_ts = data_point.in_bed_start.unix_timestamp();
-            let in_bed_end_ts = data_point.in_bed_end.unix_timestamp();
-
             sqlx::query!(
                 r#"
                 INSERT INTO data_point_sleep_analysis(
@@ -197,12 +189,12 @@ async fn insert_metric_data_point(
                 )
                 ON CONFLICT DO NOTHING"#,
                 metric_id,
-                date_ts,
-                sleep_start_ts,
-                sleep_end_ts,
+                data_point.date,
+                data_point.sleep_start,
+                data_point.sleep_end,
                 data_point.sleep_source,
-                in_bed_start_ts,
-                in_bed_end_ts,
+                data_point.in_bed_start,
+                data_point.in_bed_end,
                 data_point.in_bed_source,
                 data_point.in_bed,
                 data_point.asleep,
@@ -211,15 +203,13 @@ async fn insert_metric_data_point(
             .await?;
         }
         MetricDataPoint::Generic(data_point) => {
-            let date_ts = data_point.date.unix_timestamp();
-
             sqlx::query!(
                 r#"
                 INSERT INTO data_point_generic(metric_id, date, quantity)
                 VALUES($1, $2, $3)
                 ON CONFLICT DO NOTHING"#,
                 metric_id,
-                date_ts,
+                data_point.date,
                 data_point.quantity,
             )
             .execute(tx)
@@ -260,7 +250,7 @@ mod tests {
 
         let metric_id = insert_test_metric(&mut tx).await;
 
-        let metric = sqlx::query!(r#"SELECT name, units FROM metric WHERE id = $1"#, metric_id,)
+        let metric = sqlx::query!(r#"SELECT name, units FROM metric WHERE id = $1"#, metric_id)
             .fetch_one(&mut tx)
             .await
             .unwrap();
@@ -295,7 +285,7 @@ mod tests {
         .await
         .unwrap();
 
-        assert_eq!(generic_data_point.date.unix_timestamp(), metric.date);
+        assert_eq!(generic_data_point.date, metric.date);
         assert_eq!(generic_data_point.quantity, metric.quantity);
     }
 
@@ -331,7 +321,7 @@ mod tests {
         .await
         .unwrap();
 
-        assert_eq!(data_point.date.unix_timestamp(), metric.date);
+        assert_eq!(data_point.date, metric.date);
         assert_eq!(data_point.min, metric.min);
         assert_eq!(data_point.max, metric.max);
         assert_eq!(data_point.avg, metric.avg);
@@ -377,15 +367,12 @@ mod tests {
         .await
         .unwrap();
 
-        assert_eq!(data_point.date.unix_timestamp(), metric.date);
-        assert_eq!(data_point.sleep_start.unix_timestamp(), metric.sleep_start);
-        assert_eq!(data_point.sleep_end.unix_timestamp(), metric.sleep_end);
+        assert_eq!(data_point.date, metric.date);
+        assert_eq!(data_point.sleep_start, metric.sleep_start);
+        assert_eq!(data_point.sleep_end, metric.sleep_end);
         assert_eq!(data_point.sleep_source, metric.sleep_source);
-        assert_eq!(
-            data_point.in_bed_start.unix_timestamp(),
-            metric.in_bed_start
-        );
-        assert_eq!(data_point.in_bed_end.unix_timestamp(), metric.in_bed_end);
+        assert_eq!(data_point.in_bed_start, metric.in_bed_start);
+        assert_eq!(data_point.in_bed_end, metric.in_bed_end);
         assert_eq!(data_point.in_bed_source, metric.in_bed_source);
         assert_eq!(data_point.in_bed, metric.in_bed);
         assert_eq!(data_point.asleep, metric.asleep);

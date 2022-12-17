@@ -143,7 +143,7 @@ impl Exporter {
             FROM data_point_heart_rate d
             INNER JOIN metric m ON d.metric_id = m.id
             WHERE m.name = 'heart_rate'
-            AND d.exported = 0"#,
+            AND d.exported = false"#,
         )
         .fetch_all(&self.db.pool)
         .await?;
@@ -168,7 +168,7 @@ impl Exporter {
             sqlx::query!(
                 r#"
                 UPDATE data_point_heart_rate
-                SET exported = 1
+                SET exported = true
                 WHERE id = $1"#,
                 id,
             )
@@ -196,7 +196,7 @@ impl Exporter {
             FROM data_point_generic d
             INNER JOIN metric m ON d.metric_id = m.id
             WHERE m.name = $1
-            AND d.exported = 0
+            AND d.exported = false
             "#,
             metric_name,
         )
@@ -223,7 +223,7 @@ impl Exporter {
             sqlx::query!(
                 r#"
                 UPDATE data_point_generic
-                SET exported = 1
+                SET exported = true
                 WHERE id = $1"#,
                 id,
             )
@@ -248,7 +248,7 @@ impl Exporter {
             FROM data_point_sleep_analysis d
             INNER JOIN metric m ON d.metric_id = m.id
             WHERE m.name = 'sleep_analysis'
-            AND d.exported = 0"#,
+            AND d.exported = false"#,
         )
         .fetch_all(&self.db.pool)
         .await?;
@@ -278,7 +278,7 @@ impl Exporter {
             sqlx::query!(
                 r#"
                 UPDATE data_point_sleep_analysis
-                SET exported = 1
+                SET exported = true
                 WHERE id = $1"#,
                 id,
             )
