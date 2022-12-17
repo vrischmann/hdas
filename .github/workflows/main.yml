@@ -19,6 +19,17 @@ jobs:
       matrix:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
+
+    services:
+      postgres:
+        image: postgres:12
+        env:
+          POSTGRES_USER: vincent
+          POSTGRES_PASSWORD: vincent
+          POSTGRES_DB: servare
+        ports:
+          - 5432:5432
+
     steps:
       # Needed for coverage
       - run: rustup component add llvm-tools-preview
@@ -42,7 +53,7 @@ jobs:
 
       - name: Install tools
         run: |
-          cargo install sqlx-cli --no-default-features --features rustls,sqlite || true
+          cargo install sqlx-cli --no-default-features --features rustls,postgres || true
           cargo install grcov || true
 
       - name: Setup sqlx
