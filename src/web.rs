@@ -240,7 +240,7 @@ mod tests {
         };
 
         let metric_id = insert_metric(tx, &metric).await.unwrap();
-        assert_eq!(1, metric_id);
+        assert!(metric_id > 0);
 
         metric_id
     }
