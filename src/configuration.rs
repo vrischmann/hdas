@@ -40,6 +40,10 @@ pub fn get_configuration() -> Result<Config, config::ConfigError> {
             config::File::new("configuration.toml", config::FileFormat::Toml).required(false),
         )
         .add_source(
+            config::File::new("/etc/hdas/configuration.toml", config::FileFormat::Toml)
+                .required(false),
+        )
+        .add_source(
             config::Environment::default()
                 .try_parsing(true)
                 .separator("_"),
