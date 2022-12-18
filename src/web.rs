@@ -223,11 +223,15 @@ async fn insert_metric_data_point(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::configuration;
     use crate::db;
     use health_data::*;
+    use secrecy::ExposeSecret;
 
     async fn get_db() -> db::Db {
-        db::Db::build("postgres://vincent:vincent@localhost/hdas")
+        let config = configuration::get_configuration().unwrap();
+
+        db::Db::build(config.database.connection_string().expose_secret())
             .await
             .unwrap()
     }

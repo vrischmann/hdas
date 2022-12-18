@@ -1,0 +1,10 @@
+[application]
+listen_addr = "127.0.0.1:5804"
+victoria_addr = "127.0.0.1:4242"
+
+[database]
+username = "vincent"
+password = "vincent"
+port = 5432
+host = "127.0.0.1"
+name = "hdas"
