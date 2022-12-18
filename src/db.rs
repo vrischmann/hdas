@@ -1,20 +1,18 @@
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
+use sqlx::postgres::{PgConnectOptions, PgPool, PgPoolOptions};
 use sqlx::ConnectOptions;
 use std::fmt;
 use std::str::FromStr;
 
 pub struct Db {
-    pub pool: SqlitePool,
+    pub pool: PgPool,
 }
 
 impl Db {
-    pub async fn from_path(path: &str) -> Result<Self> {
-        let mut options = SqliteConnectOptions::from_str(path)?
-            .create_if_missing(true)
-            .pragma("foreign_keys", "on");
+    pub async fn build(connection_string: &str) -> Result<Self> {
+        let mut options = PgConnectOptions::from_str(connection_string)?;
         options.log_statements(log::LevelFilter::Debug);
 
-        let pool = SqlitePoolOptions::new().connect_with(options).await?;
+        let pool = PgPoolOptions::new().connect_with(options).await?;
 
         sqlx::migrate!("./migrations").run(&pool).await?;
 
@@ -22,7 +20,7 @@ impl Db {
     }
 }
 
-pub type Transaction = sqlx::Transaction<'static, sqlx::Sqlite>;
+pub type Transaction = sqlx::Transaction<'static, sqlx::Postgres>;
 
 #[derive(Debug)]
 pub enum Error {

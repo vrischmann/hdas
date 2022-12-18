@@ -1,14 +1,35 @@
 {
-  "db": "SQLite",
+  "db": "PostgreSQL",
   "039da3a301dbefda2cf78b148a59c6b41c9f11a8dba9d367cf9630375261ea5b": {
     "describe": {
       "columns": [],
       "nullable": [],
       "parameters": {
-        "Right": 10
+        "Left": [
+          "Int8",
+          "Timestamptz",
+          "Timestamptz",
+          "Timestamptz",
+          "Text",
+          "Timestamptz",
+          "Timestamptz",
+          "Text",
+          "Float8",
+          "Float8"
+        ]
       }
     },
     "query": "\n                INSERT INTO data_point_sleep_analysis(\n                  metric_id, date,\n                  sleep_start, sleep_end, sleep_source,\n                  in_bed_start, in_bed_end, in_bed_source,\n                  in_bed, asleep\n                )\n                VALUES(\n                  $1, $2,\n                  $3, $4, $5,\n                  $6, $7, $8,\n                  $9, $10\n                )\n                ON CONFLICT DO NOTHING"
+  },
+  "04d2b02b8e18dcb6ea222d4ae0203c217f743137a8a2d2dd9a87f785183090e3": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "DELETE FROM data_point_generic WHERE exported = true"
   },
   "1c8c15e91f7c8b8046a085051329f005cce2a04b7b5c3361f80e3d2061d9958e": {
     "describe": {
@@ -29,50 +50,22 @@
         false
       ],
       "parameters": {
-        "Right": 1
+        "Left": [
+          "Int8"
+        ]
       }
     },
     "query": "SELECT name, units FROM metric WHERE id = $1"
   },
-  "49946aea4b402cf904b2a3d937234b5a41da4b9f3475c501f0daea5d3cba6b22": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int64"
-        },
-        {
-          "name": "quantity",
-          "ordinal": 1,
-          "type_info": "Float"
-        },
-        {
-          "name": "date",
-          "ordinal": 2,
-          "type_info": "Int64"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false
-      ],
-      "parameters": {
-        "Right": 1
-      }
-    },
-    "query": "\n            SELECT d.id, d.quantity, d.date\n            FROM data_point_generic d\n            INNER JOIN metric m ON d.metric_id = m.id\n            WHERE m.name = $1\n            AND d.exported = 0\n            "
-  },
-  "51068e8599d06632275db16acba47be27cb81ae466e09695bfb41252816aa9e5": {
+  "5c7e8bca08b10f84460681abcd0f648f0db491d2ebe9fb891080ddedec7fba7f": {
     "describe": {
       "columns": [],
       "nullable": [],
       "parameters": {
-        "Right": 0
+        "Left": []
       }
     },
-    "query": "DELETE FROM data_point_generic WHERE exported = 1"
+    "query": "DELETE FROM data_point_sleep_analysis WHERE exported = true"
   },
   "7ea1b6290b84edc68aa4e0f7dc4b17090ced4e7bb5d309990a6b124a1eb11dd8": {
     "describe": {
@@ -80,17 +73,17 @@
         {
           "name": "date",
           "ordinal": 0,
-          "type_info": "Int64"
+          "type_info": "Timestamptz"
         },
         {
           "name": "sleep_start",
           "ordinal": 1,
-          "type_info": "Int64"
+          "type_info": "Timestamptz"
         },
         {
           "name": "sleep_end",
           "ordinal": 2,
-          "type_info": "Int64"
+          "type_info": "Timestamptz"
         },
         {
           "name": "sleep_source",
@@ -100,12 +93,12 @@
         {
           "name": "in_bed_start",
           "ordinal": 4,
-          "type_info": "Int64"
+          "type_info": "Timestamptz"
         },
         {
           "name": "in_bed_end",
           "ordinal": 5,
-          "type_info": "Int64"
+          "type_info": "Timestamptz"
         },
         {
           "name": "in_bed_source",
@@ -115,12 +108,12 @@
         {
           "name": "in_bed",
           "ordinal": 7,
-          "type_info": "Float"
+          "type_info": "Float8"
         },
         {
           "name": "asleep",
           "ordinal": 8,
-          "type_info": "Float"
+          "type_info": "Float8"
         }
       ],
       "nullable": [
@@ -135,50 +128,72 @@
         false
       ],
       "parameters": {
-        "Right": 1
+        "Left": [
+          "Int8"
+        ]
       }
     },
     "query": "\n            SELECT\n              date, sleep_start, sleep_end, sleep_source,\n              in_bed_start, in_bed_end, in_bed_source,\n              in_bed, asleep\n            FROM data_point_sleep_analysis WHERE metric_id = $1"
   },
-  "8b9da5fa3e5ac7e27c765372a68a1d45a72f4e2f1106a21b87b6b3eda7ba164b": {
+  "93d7fe444402bc2c040bd7de5a2a14a61244810fe5c883185335fd6c24f7baf6": {
     "describe": {
       "columns": [],
       "nullable": [],
       "parameters": {
-        "Right": 1
+        "Left": [
+          "Int8"
+        ]
       }
     },
-    "query": "\n                UPDATE data_point_sleep_analysis\n                SET exported = 1\n                WHERE id = $1"
+    "query": "\n                UPDATE data_point_heart_rate\n                SET exported = true\n                WHERE id = $1"
   },
-  "8bd4c567bc2c26f690f829ec5ec1f7253c5a8678af58f7c61b8b742988b70507": {
+  "9455f9c9b67eb03b4065f08230bae0898e6f7d4660459841179c39155cdc5345": {
     "describe": {
       "columns": [
         {
           "name": "id",
           "ordinal": 0,
-          "type_info": "Int64"
+          "type_info": "Int8"
         },
         {
-          "name": "max",
+          "name": "in_bed",
           "ordinal": 1,
-          "type_info": "Float"
+          "type_info": "Float8"
+        },
+        {
+          "name": "asleep",
+          "ordinal": 2,
+          "type_info": "Float8"
         },
         {
           "name": "date",
-          "ordinal": 2,
-          "type_info": "Int64"
+          "ordinal": 3,
+          "type_info": "Timestamptz"
         }
       ],
       "nullable": [
         false,
         false,
+        false,
         false
       ],
       "parameters": {
-        "Right": 0
+        "Left": []
       }
     },
-    "query": "\n            SELECT d.id, d.max, d.date\n            FROM data_point_heart_rate d\n            INNER JOIN metric m ON d.metric_id = m.id\n            WHERE m.name = 'heart_rate'\n            AND d.exported = 0"
+    "query": "\n            SELECT d.id, d.in_bed, d.asleep, d.date\n            FROM data_point_sleep_analysis d\n            INNER JOIN metric m ON d.metric_id = m.id\n            WHERE m.name = 'sleep_analysis'\n            AND d.exported = false"
+  },
+  "a07b2885e6ce27bb15986cc56379186c3e3dd2da6b79d72fa71fc3f66d7488ce": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "\n                UPDATE data_point_sleep_analysis\n                SET exported = true\n                WHERE id = $1"
   },
   "aa84945812eb4e961025ed27b4843d33aaf85840473bc83edf63563d31a41d2f": {
     "describe": {
@@ -186,93 +201,108 @@
         {
           "name": "id",
           "ordinal": 0,
-          "type_info": "Int64"
+          "type_info": "Int8"
         }
       ],
       "nullable": [
         false
       ],
       "parameters": {
-        "Right": 2
+        "Left": [
+          "Text",
+          "Text"
+        ]
       }
     },
     "query": "\n        INSERT INTO metric(name, units) VALUES($1, $2)\n        ON CONFLICT (name) DO UPDATE SET units = excluded.units\n        RETURNING id"
-  },
-  "b778ab3ecc4c1199fcb4053aeb4d7fb9fb576d57037d1f01549280474d7415ab": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 0
-      }
-    },
-    "query": "DELETE FROM data_point_heart_rate WHERE exported = 1"
   },
   "cb492498435fa03622405347e0d3808e21876a2fd8b4d2b632427c4961781922": {
     "describe": {
       "columns": [],
       "nullable": [],
       "parameters": {
-        "Right": 3
+        "Left": [
+          "Int8",
+          "Timestamptz",
+          "Float8"
+        ]
       }
     },
     "query": "\n                INSERT INTO data_point_generic(metric_id, date, quantity)\n                VALUES($1, $2, $3)\n                ON CONFLICT DO NOTHING"
   },
-  "cc78e355fba4741054f1b024c464bc395c8583b66040d7f5aa1d459f9cc1d595": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 1
-      }
-    },
-    "query": "\n                UPDATE data_point_generic\n                SET exported = 1\n                WHERE id = $1"
-  },
-  "dc2095e165d3abfeaa83d5166697100caade7d863c461d1ce5c9b86a3f21519f": {
+  "d102fad91601edce276d80a1c569571ac0ec811bb16ab74fc315ca6c5fc0dd4d": {
     "describe": {
       "columns": [
         {
           "name": "id",
           "ordinal": 0,
-          "type_info": "Int64"
+          "type_info": "Int8"
         },
         {
-          "name": "in_bed",
+          "name": "max",
           "ordinal": 1,
-          "type_info": "Float"
-        },
-        {
-          "name": "asleep",
-          "ordinal": 2,
-          "type_info": "Float"
+          "type_info": "Float8"
         },
         {
           "name": "date",
-          "ordinal": 3,
-          "type_info": "Int64"
+          "ordinal": 2,
+          "type_info": "Timestamptz"
         }
       ],
       "nullable": [
         false,
         false,
+        false
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\n            SELECT d.id, d.max, d.date\n            FROM data_point_heart_rate d\n            INNER JOIN metric m ON d.metric_id = m.id\n            WHERE m.name = 'heart_rate'\n            AND d.exported = false"
+  },
+  "e996f8094347d9499efc39d2b1f713aca2beb8ed409dcbb04bd341511d59c75d": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "quantity",
+          "ordinal": 1,
+          "type_info": "Float8"
+        },
+        {
+          "name": "date",
+          "ordinal": 2,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
         false,
         false
       ],
       "parameters": {
-        "Right": 0
+        "Left": [
+          "Text"
+        ]
       }
     },
-    "query": "\n            SELECT d.id, d.in_bed, d.asleep, d.date\n            FROM data_point_sleep_analysis d\n            INNER JOIN metric m ON d.metric_id = m.id\n            WHERE m.name = 'sleep_analysis'\n            AND d.exported = 0"
+    "query": "\n            SELECT d.id, d.quantity, d.date\n            FROM data_point_generic d\n            INNER JOIN metric m ON d.metric_id = m.id\n            WHERE m.name = $1\n            AND d.exported = false\n            "
   },
-  "e20f1c567f269c9dbdfac7d88b12985458c0b722cfa81d9124789fde8feedead": {
+  "e9ea250f4b8c0f83b7d7a74aaabe87d24bda852db063fddc35d2e4e24709dd98": {
     "describe": {
       "columns": [],
       "nullable": [],
       "parameters": {
-        "Right": 1
+        "Left": [
+          "Int8"
+        ]
       }
     },
-    "query": "\n                UPDATE data_point_heart_rate\n                SET exported = 1\n                WHERE id = $1"
+    "query": "\n                UPDATE data_point_generic\n                SET exported = true\n                WHERE id = $1"
   },
   "f0e0c5696e61d550f5f152cbd64a81855419c4bc508fccdfd2cc0b162bfc7ccf": {
     "describe": {
@@ -280,22 +310,22 @@
         {
           "name": "date",
           "ordinal": 0,
-          "type_info": "Int64"
+          "type_info": "Timestamptz"
         },
         {
           "name": "min",
           "ordinal": 1,
-          "type_info": "Float"
+          "type_info": "Float8"
         },
         {
           "name": "max",
           "ordinal": 2,
-          "type_info": "Float"
+          "type_info": "Float8"
         },
         {
           "name": "avg",
           "ordinal": 3,
-          "type_info": "Float"
+          "type_info": "Float8"
         }
       ],
       "nullable": [
@@ -305,27 +335,35 @@
         false
       ],
       "parameters": {
-        "Right": 1
+        "Left": [
+          "Int8"
+        ]
       }
     },
     "query": "\n            SELECT date, min, max, avg\n            FROM data_point_heart_rate WHERE metric_id = $1"
   },
-  "fb4267d89df1743c08e67e42a4737b96a637540b8afc30e72fdb9a39611531bc": {
+  "f45b19ed2593929d500762929a6a4109ac0363e015b9b0252f8bf12b23fb02bd": {
     "describe": {
       "columns": [],
       "nullable": [],
       "parameters": {
-        "Right": 0
+        "Left": []
       }
     },
-    "query": "DELETE FROM data_point_sleep_analysis WHERE exported = 1"
+    "query": "DELETE FROM data_point_heart_rate WHERE exported = true"
   },
   "fbd46296ba7ca5ac51a1c9ee4418baf35c07f5ec7b6908ef939a9ec79f3ee1fc": {
     "describe": {
       "columns": [],
       "nullable": [],
       "parameters": {
-        "Right": 5
+        "Left": [
+          "Int8",
+          "Timestamptz",
+          "Float8",
+          "Float8",
+          "Float8"
+        ]
       }
     },
     "query": "\n                INSERT INTO data_point_heart_rate(metric_id, date, min, max, avg)\n                VALUES($1, $2, $3, $4, $5)\n                ON CONFLICT DO NOTHING"
@@ -336,12 +374,12 @@
         {
           "name": "date",
           "ordinal": 0,
-          "type_info": "Int64"
+          "type_info": "Timestamptz"
         },
         {
           "name": "quantity",
           "ordinal": 1,
-          "type_info": "Float"
+          "type_info": "Float8"
         }
       ],
       "nullable": [
@@ -349,7 +387,9 @@
         false
       ],
       "parameters": {
-        "Right": 1
+        "Left": [
+          "Int8"
+        ]
       }
     },
     "query": "SELECT date, quantity FROM data_point_generic WHERE metric_id = $1"

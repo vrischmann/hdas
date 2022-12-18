@@ -18,7 +18,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 clap = { version = "3.2", features = ["cargo"] }
 
-sqlx = { version = "0.6", default-features = false, features = ["runtime-tokio-rustls", "sqlite", "migrate", "macros", "offline"] }
+sqlx = { version = "0.6", default-features = false, features = ["runtime-tokio-rustls", "postgres", "time", "migrate", "macros", "offline"] }
 
 tokio = { version = "1.20", features = ["signal", "macros"] }
 axum = { version = "0.6", default-features = false, features = ["tokio", "http1"] }

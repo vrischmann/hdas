@@ -78,17 +78,18 @@ impl Cleaner {
     async fn do_clean(&mut self) -> Result<()> {
         let mut tx = self.db.pool.begin().await?;
 
-        let result1 = sqlx::query!(r#"DELETE FROM data_point_heart_rate WHERE exported = 1"#)
+        let result1 = sqlx::query!(r#"DELETE FROM data_point_heart_rate WHERE exported = true"#)
             .execute(&mut tx)
             .await?;
 
-        let result2 = sqlx::query!(r#"DELETE FROM data_point_generic WHERE exported = 1"#)
+        let result2 = sqlx::query!(r#"DELETE FROM data_point_generic WHERE exported = true"#)
             .execute(&mut tx)
             .await?;
 
-        let result3 = sqlx::query!(r#"DELETE FROM data_point_sleep_analysis WHERE exported = 1"#)
-            .execute(&mut tx)
-            .await?;
+        let result3 =
+            sqlx::query!(r#"DELETE FROM data_point_sleep_analysis WHERE exported = true"#)
+                .execute(&mut tx)
+                .await?;
 
         tx.commit().await?;
 

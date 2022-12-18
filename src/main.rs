@@ -17,15 +17,19 @@ async fn fallback_handler() -> (http::StatusCode, String) {
 }
 
 struct App {
-    db_path: String,
+    connection_string: String,
     listen_addr: net::SocketAddr,
     victoria_addr: net::SocketAddr,
 }
 
 impl App {
-    fn new(db_path: String, listen_addr: net::SocketAddr, victoria_addr: net::SocketAddr) -> Self {
+    fn new(
+        connection_string: String,
+        listen_addr: net::SocketAddr,
+        victoria_addr: net::SocketAddr,
+    ) -> Self {
         Self {
-            db_path,
+            connection_string,
             listen_addr,
             victoria_addr,
         }
@@ -58,7 +62,7 @@ impl App {
         let (notify_shutdown_sender, _) = tokio::sync::broadcast::channel(2);
 
         // Initialize the database
-        let db = Arc::new(db::Db::from_path(&self.db_path).await?);
+        let db = Arc::new(db::Db::build(&self.connection_string).await?);
 
         // Start the exporter
         let exporter = exporter::Exporter::new(db.clone(), self.victoria_addr);
