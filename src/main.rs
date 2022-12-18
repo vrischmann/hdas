@@ -1,4 +1,5 @@
 use core::future::Future;
+use secrecy::ExposeSecret;
 use shutdown::Shutdown;
 use std::net;
 use std::str::FromStr;
@@ -6,6 +7,7 @@ use std::sync::Arc;
 use tracing::{debug, error, info};
 
 mod cleaner;
+mod configuration;
 mod db;
 mod exporter;
 mod health_data;
@@ -23,16 +25,25 @@ struct App {
 }
 
 impl App {
-    fn new(
-        connection_string: String,
-        listen_addr: net::SocketAddr,
-        victoria_addr: net::SocketAddr,
-    ) -> Self {
-        Self {
-            connection_string,
+    fn build(config: configuration::Config) -> anyhow::Result<Self> {
+        let listen_addr = std::net::SocketAddr::from_str(&config.application.listen_addr)?;
+        info!(listen_addr = listen_addr.to_string(), "got listen addr");
+
+        let victoria_addr = std::net::SocketAddr::from_str(&config.application.victoria_addr)?;
+        info!(
+            victoria_addr = victoria_addr.to_string(),
+            "got victoria addr"
+        );
+
+        Ok(Self {
+            connection_string: config
+                .database
+                .connection_string()
+                .expose_secret()
+                .to_string(),
             listen_addr,
             victoria_addr,
-        }
+        })
     }
 
     async fn run_web_app(
@@ -92,28 +103,8 @@ impl App {
     }
 }
 
-fn serve(args: &clap::ArgMatches) -> anyhow::Result<()> {
-    let db_path = args.get_one::<String>("db").unwrap(); // Safe because clap enforces we get a value
-
-    let listen_addr = args
-        .get_one::<String>("listen-addr")
-        .map(|addr| std::net::SocketAddr::from_str(addr).expect("expected a valid listen address"))
-        .unwrap(); // Safe because clap enforces we get a value
-    info!(listen_addr = listen_addr.to_string(), "got listen addr");
-
-    let victoria_addr = args
-        .get_one::<String>("victoria-addr")
-        .map(|addr| {
-            std::net::SocketAddr::from_str(addr).expect("expected a valid VictoriaMetrics address")
-        })
-        .unwrap(); // Safe because clap enforces we get a value
-    info!(
-        victoria_addr = victoria_addr.to_string(),
-        "got victoria addr"
-    );
-
+fn serve(config: configuration::Config) -> anyhow::Result<()> {
     // Build the Tokio runtime
-
     let runtime = tokio::runtime::Builder::new_current_thread()
         .worker_threads(4)
         .thread_name("hdas")
@@ -123,7 +114,7 @@ fn serve(args: &clap::ArgMatches) -> anyhow::Result<()> {
         .unwrap();
     let _runtime_guard = runtime.enter();
 
-    let app = App::new(db_path.to_string(), listen_addr, victoria_addr);
+    let app = App::build(config)?;
     let future = app.run(shutdown_signal());
 
     // Run the app
@@ -155,35 +146,7 @@ async fn shutdown_signal() {
 }
 
 fn main() {
-    let root_command = clap::Command::new("hdas")
-        .version(clap::crate_version!())
-        .about("Health Data API Server")
-        .arg(
-            clap::Arg::new("listen-addr")
-                .long("listen-addr")
-                .help("listening address")
-                .takes_value(true)
-                .default_value("127.0.0.1:5804")
-                .value_name("ADDR"),
-        )
-        .arg(
-            clap::Arg::new("victoria-addr")
-                .long("victoria-addr")
-                .help("Victoria Metrics address")
-                .takes_value(true)
-                .default_value("127.0.0.1:4242")
-                .value_name("ADDR"),
-        )
-        .arg(
-            clap::Arg::new("db")
-                .long("db")
-                .help("database path")
-                .takes_value(true)
-                .default_value("data.db")
-                .value_name("PATH"),
-        );
-
-    let matches = root_command.get_matches();
+    let config = configuration::get_configuration().expect("Unable to read configuration");
 
     // Initialize logger
     if std::env::var("RUST_LOG").is_err() {
@@ -193,7 +156,7 @@ fn main() {
 
     // Run the appropriate command
 
-    match serve(&matches) {
+    match serve(config) {
         Ok(()) => {}
         Err(err) => error!(%err, "unable to serve, got err"),
     }
