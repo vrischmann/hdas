@@ -1,42 +1,16 @@
 {
   "db": "SQLite",
-  "1436c8ef3815360eb3ac10662d79d68d0bfae170710ea5de7a6ee9c034825426": {
+  "039da3a301dbefda2cf78b148a59c6b41c9f11a8dba9d367cf9630375261ea5b": {
     "describe": {
-      "columns": [
-        {
-          "name": "date",
-          "ordinal": 0,
-          "type_info": "Int64"
-        },
-        {
-          "name": "min",
-          "ordinal": 1,
-          "type_info": "Float"
-        },
-        {
-          "name": "max",
-          "ordinal": 2,
-          "type_info": "Float"
-        },
-        {
-          "name": "avg",
-          "ordinal": 3,
-          "type_info": "Float"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false,
-        false
-      ],
+      "columns": [],
+      "nullable": [],
       "parameters": {
-        "Right": 1
+        "Right": 10
       }
     },
-    "query": "\n            SELECT date, min, max, avg\n            FROM data_point_heart_rate WHERE metric_id = ?"
+    "query": "\n                INSERT INTO data_point_sleep_analysis(\n                  metric_id, date,\n                  sleep_start, sleep_end, sleep_source,\n                  in_bed_start, in_bed_end, in_bed_source,\n                  in_bed, asleep\n                )\n                VALUES(\n                  $1, $2,\n                  $3, $4, $5,\n                  $6, $7, $8,\n                  $9, $10\n                )\n                ON CONFLICT DO NOTHING"
   },
-  "2359fa38f1371944d2529153a12e1a393c2cd1720ddf978b895d420ff7974799": {
+  "1c8c15e91f7c8b8046a085051329f005cce2a04b7b5c3361f80e3d2061d9958e": {
     "describe": {
       "columns": [
         {
@@ -58,27 +32,37 @@
         "Right": 1
       }
     },
-    "query": "SELECT name, units FROM metric WHERE id = ?"
+    "query": "SELECT name, units FROM metric WHERE id = $1"
   },
-  "38cf2cccd186164127405e70670787d41f5c3cf6231b9cc0d634c29f105e6aa1": {
+  "49946aea4b402cf904b2a3d937234b5a41da4b9f3475c501f0daea5d3cba6b22": {
     "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 3
-      }
-    },
-    "query": "\n                INSERT INTO data_point_generic(metric_id, date, quantity)\n                VALUES(?, ?, ?)\n                ON CONFLICT DO NOTHING"
-  },
-  "474201b308d0105e99e4128946850b86fc3e17c80e5785e11abfddbd9cf84669": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int64"
+        },
+        {
+          "name": "quantity",
+          "ordinal": 1,
+          "type_info": "Float"
+        },
+        {
+          "name": "date",
+          "ordinal": 2,
+          "type_info": "Int64"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false
+      ],
       "parameters": {
         "Right": 1
       }
     },
-    "query": "\n                UPDATE data_point_sleep_analysis\n                SET exported = 1\n                WHERE id = ?"
+    "query": "\n            SELECT d.id, d.quantity, d.date\n            FROM data_point_generic d\n            INNER JOIN metric m ON d.metric_id = m.id\n            WHERE m.name = $1\n            AND d.exported = 0\n            "
   },
   "51068e8599d06632275db16acba47be27cb81ae466e09695bfb41252816aa9e5": {
     "describe": {
@@ -90,17 +74,7 @@
     },
     "query": "DELETE FROM data_point_generic WHERE exported = 1"
   },
-  "6207761364cc41811742b136b45c98e35aaa778892e0c532af5207d93a298656": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 1
-      }
-    },
-    "query": "\n                UPDATE data_point_generic\n                SET exported = 1\n                WHERE id = ?"
-  },
-  "643718d3a10fce25ed87286c8de6cda7d4bd0c67a92b72e02c3b692b2293560f": {
+  "7ea1b6290b84edc68aa4e0f7dc4b17090ced4e7bb5d309990a6b124a1eb11dd8": {
     "describe": {
       "columns": [
         {
@@ -164,31 +138,17 @@
         "Right": 1
       }
     },
-    "query": "\n            SELECT\n              date, sleep_start, sleep_end, sleep_source,\n              in_bed_start, in_bed_end, in_bed_source,\n              in_bed, asleep\n            FROM data_point_sleep_analysis WHERE metric_id = ?"
+    "query": "\n            SELECT\n              date, sleep_start, sleep_end, sleep_source,\n              in_bed_start, in_bed_end, in_bed_source,\n              in_bed, asleep\n            FROM data_point_sleep_analysis WHERE metric_id = $1"
   },
-  "84d03c577a8fa1b56cfaecff1800ab50f3092798e08dd94ce4b5d67129ff7222": {
+  "8b9da5fa3e5ac7e27c765372a68a1d45a72f4e2f1106a21b87b6b3eda7ba164b": {
     "describe": {
-      "columns": [
-        {
-          "name": "date",
-          "ordinal": 0,
-          "type_info": "Int64"
-        },
-        {
-          "name": "quantity",
-          "ordinal": 1,
-          "type_info": "Float"
-        }
-      ],
-      "nullable": [
-        false,
-        false
-      ],
+      "columns": [],
+      "nullable": [],
       "parameters": {
         "Right": 1
       }
     },
-    "query": "SELECT date, quantity FROM data_point_generic WHERE metric_id = ?"
+    "query": "\n                UPDATE data_point_sleep_analysis\n                SET exported = 1\n                WHERE id = $1"
   },
   "8bd4c567bc2c26f690f829ec5ec1f7253c5a8678af58f7c61b8b742988b70507": {
     "describe": {
@@ -220,35 +180,23 @@
     },
     "query": "\n            SELECT d.id, d.max, d.date\n            FROM data_point_heart_rate d\n            INNER JOIN metric m ON d.metric_id = m.id\n            WHERE m.name = 'heart_rate'\n            AND d.exported = 0"
   },
-  "8ebde5448fa00eef687050462457e22ea3ed1b6fb0d8fb2bdcaba11f9c37bb37": {
+  "aa84945812eb4e961025ed27b4843d33aaf85840473bc83edf63563d31a41d2f": {
     "describe": {
-      "columns": [],
-      "nullable": [],
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int64"
+        }
+      ],
+      "nullable": [
+        false
+      ],
       "parameters": {
-        "Right": 10
+        "Right": 2
       }
     },
-    "query": "\n                INSERT INTO data_point_sleep_analysis(\n                  metric_id, date,\n                  sleep_start, sleep_end, sleep_source,\n                  in_bed_start, in_bed_end, in_bed_source,\n                  in_bed, asleep\n                )\n                VALUES(\n                  ?, ?,\n                  ?, ?, ?,\n                  ?, ?, ?,\n                  ?, ?\n                )\n                ON CONFLICT DO NOTHING"
-  },
-  "902eab0e6061ada3a0935e04766c87472372c140c69a286a28cf16efcdf04275": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 1
-      }
-    },
-    "query": "\n                UPDATE data_point_heart_rate\n                SET exported = 1\n                WHERE id = ?"
-  },
-  "9aa9ab6e7a0359b4e34068b2f3c0f58816f54ab0e2c3c41a0c82f11bbf8e441b": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 5
-      }
-    },
-    "query": "\n                INSERT INTO data_point_heart_rate(metric_id, date, min, max, avg)\n                VALUES(?, ?, ?, ?, ?)\n                ON CONFLICT DO NOTHING"
+    "query": "\n        INSERT INTO metric(name, units) VALUES($1, $2)\n        ON CONFLICT (name) DO UPDATE SET units = excluded.units\n        RETURNING id"
   },
   "b778ab3ecc4c1199fcb4053aeb4d7fb9fb576d57037d1f01549280474d7415ab": {
     "describe": {
@@ -259,6 +207,26 @@
       }
     },
     "query": "DELETE FROM data_point_heart_rate WHERE exported = 1"
+  },
+  "cb492498435fa03622405347e0d3808e21876a2fd8b4d2b632427c4961781922": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 3
+      }
+    },
+    "query": "\n                INSERT INTO data_point_generic(metric_id, date, quantity)\n                VALUES($1, $2, $3)\n                ON CONFLICT DO NOTHING"
+  },
+  "cc78e355fba4741054f1b024c464bc395c8583b66040d7f5aa1d459f9cc1d595": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "\n                UPDATE data_point_generic\n                SET exported = 1\n                WHERE id = $1"
   },
   "dc2095e165d3abfeaa83d5166697100caade7d863c461d1ce5c9b86a3f21519f": {
     "describe": {
@@ -296,44 +264,42 @@
     },
     "query": "\n            SELECT d.id, d.in_bed, d.asleep, d.date\n            FROM data_point_sleep_analysis d\n            INNER JOIN metric m ON d.metric_id = m.id\n            WHERE m.name = 'sleep_analysis'\n            AND d.exported = 0"
   },
-  "f5e05c7ed423180bb658698f2e64a11a1d25fa4d7b8ee42be44490bd3c24189a": {
+  "e20f1c567f269c9dbdfac7d88b12985458c0b722cfa81d9124789fde8feedead": {
     "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int64"
-        }
-      ],
-      "nullable": [
-        false
-      ],
+      "columns": [],
+      "nullable": [],
       "parameters": {
-        "Right": 2
+        "Right": 1
       }
     },
-    "query": "\n        INSERT INTO metric(name, units) VALUES(?, ?)\n        ON CONFLICT (name) DO UPDATE SET units = excluded.units\n        RETURNING id"
+    "query": "\n                UPDATE data_point_heart_rate\n                SET exported = 1\n                WHERE id = $1"
   },
-  "fae9c3d1b73fb1dc05bb886ea7c7ca814de92127b5f6886d9eb665fc32f816da": {
+  "f0e0c5696e61d550f5f152cbd64a81855419c4bc508fccdfd2cc0b162bfc7ccf": {
     "describe": {
       "columns": [
         {
-          "name": "id",
+          "name": "date",
           "ordinal": 0,
           "type_info": "Int64"
         },
         {
-          "name": "quantity",
+          "name": "min",
           "ordinal": 1,
           "type_info": "Float"
         },
         {
-          "name": "date",
+          "name": "max",
           "ordinal": 2,
-          "type_info": "Int64"
+          "type_info": "Float"
+        },
+        {
+          "name": "avg",
+          "ordinal": 3,
+          "type_info": "Float"
         }
       ],
       "nullable": [
+        false,
         false,
         false,
         false
@@ -342,7 +308,7 @@
         "Right": 1
       }
     },
-    "query": "\n            SELECT d.id, d.quantity, d.date\n            FROM data_point_generic d\n            INNER JOIN metric m ON d.metric_id = m.id\n            WHERE m.name = ?\n            AND d.exported = 0\n            "
+    "query": "\n            SELECT date, min, max, avg\n            FROM data_point_heart_rate WHERE metric_id = $1"
   },
   "fb4267d89df1743c08e67e42a4737b96a637540b8afc30e72fdb9a39611531bc": {
     "describe": {
@@ -353,5 +319,39 @@
       }
     },
     "query": "DELETE FROM data_point_sleep_analysis WHERE exported = 1"
+  },
+  "fbd46296ba7ca5ac51a1c9ee4418baf35c07f5ec7b6908ef939a9ec79f3ee1fc": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 5
+      }
+    },
+    "query": "\n                INSERT INTO data_point_heart_rate(metric_id, date, min, max, avg)\n                VALUES($1, $2, $3, $4, $5)\n                ON CONFLICT DO NOTHING"
+  },
+  "ffc3a96a0795fb5c2353627c7feb17b72357401a22b9df15e1eb7aea49990549": {
+    "describe": {
+      "columns": [
+        {
+          "name": "date",
+          "ordinal": 0,
+          "type_info": "Int64"
+        },
+        {
+          "name": "quantity",
+          "ordinal": 1,
+          "type_info": "Float"
+        }
+      ],
+      "nullable": [
+        false,
+        false
+      ],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "SELECT date, quantity FROM data_point_generic WHERE metric_id = $1"
   }
 }
