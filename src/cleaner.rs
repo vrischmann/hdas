@@ -6,41 +6,14 @@ use std::sync::Arc;
 use std::time;
 use tracing::{error, info};
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
-    IO(io::Error),
-    SQLx(sqlx::Error),
-    Fmt(fmt::Error),
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::IO(err) => write!(f, "{}", err),
-            Self::SQLx(err) => write!(f, "{}", err),
-            Self::Fmt(err) => write!(f, "{}", err),
-        }
-    }
-}
-
-impl std::error::Error for Error {}
-
-impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Error {
-        Error::IO(err)
-    }
-}
-
-impl From<sqlx::Error> for Error {
-    fn from(err: sqlx::Error) -> Error {
-        Error::SQLx(err)
-    }
-}
-
-impl From<fmt::Error> for Error {
-    fn from(err: fmt::Error) -> Error {
-        Error::Fmt(err)
-    }
+    #[error(transparent)]
+    IO(#[from] io::Error),
+    #[error(transparent)]
+    SQLx(#[from] sqlx::Error),
+    #[error(transparent)]
+    Fmt(#[from] fmt::Error),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
