@@ -1,6 +1,5 @@
 use sqlx::postgres::{PgConnectOptions, PgPool, PgPoolOptions};
 use sqlx::ConnectOptions;
-use std::fmt;
 use std::str::FromStr;
 
 pub struct Db {
@@ -14,7 +13,10 @@ impl Db {
 
         let pool = PgPoolOptions::new().connect_with(options).await?;
 
-        sqlx::migrate!("./migrations").run(&pool).await?;
+        sqlx::migrate!("./migrations")
+            .run(&pool)
+            .await
+            .map_err(Error::Migration)?;
 
         Ok(Self { pool })
     }
@@ -22,33 +24,12 @@ impl Db {
 
 pub type Transaction = sqlx::Transaction<'static, sqlx::Postgres>;
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
-    SQLx(sqlx::Error),
-    Migration(sqlx::migrate::MigrateError),
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::SQLx(err) => write!(f, "generic sqlx error: {}", err),
-            Error::Migration(err) => write!(f, "migration error: {}", err),
-        }
-    }
-}
-
-impl std::error::Error for Error {}
-
-impl From<sqlx::Error> for Error {
-    fn from(err: sqlx::Error) -> Error {
-        Error::SQLx(err)
-    }
-}
-
-impl From<sqlx::migrate::MigrateError> for Error {
-    fn from(err: sqlx::migrate::MigrateError) -> Error {
-        Error::Migration(err)
-    }
+    #[error(transparent)]
+    SQLx(#[from] sqlx::Error),
+    #[error("unable to run migrations: {0}")]
+    Migration(#[source] sqlx::migrate::MigrateError),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
