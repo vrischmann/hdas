@@ -126,7 +126,8 @@ impl Exporter {
             writeln!(
                 commands_buffer,
                 "put health_data_heart_rate {} {} ",
-                row.date, row.max
+                row.date.unix_timestamp_nanos() / 1_000_000,
+                row.max
             )?;
 
             ids.push(row.id);
@@ -181,7 +182,9 @@ impl Exporter {
             writeln!(
                 commands_buffer,
                 "put health_data_{} {} {} ",
-                metric_name, row.date, row.quantity
+                metric_name,
+                row.date.unix_timestamp_nanos() / 1_000_000,
+                row.quantity
             )?;
 
             ids.push(row.id);
@@ -231,12 +234,14 @@ impl Exporter {
             writeln!(
                 commands_buffer,
                 "put health_data_sleep_analysis {} {} type=in_bed",
-                row.date, row.in_bed,
+                row.date.unix_timestamp_nanos() / 1_000_000,
+                row.in_bed,
             )?;
             writeln!(
                 commands_buffer,
                 "put health_data_sleep_analysis {} {} type=asleep",
-                row.date, row.asleep,
+                row.date.unix_timestamp_nanos() / 1_000_000,
+                row.asleep,
             )?;
 
             ids.push(row.id);
